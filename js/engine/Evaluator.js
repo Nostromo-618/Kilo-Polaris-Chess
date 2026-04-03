@@ -197,8 +197,8 @@ export function evaluate(state, color) {
   }
 
   // Pawn structure evaluation
-  score += evaluatePawnStructure(whitePawnPositions, whitePawnFiles, blackPawnFiles, "white", color);
-  score += evaluatePawnStructure(blackPawnPositions, blackPawnFiles, whitePawnFiles, "black", color);
+  score += evaluatePawnStructure(whitePawnPositions, whitePawnFiles, blackPawnFiles, blackPawnPositions, "white", color);
+  score += evaluatePawnStructure(blackPawnPositions, blackPawnFiles, whitePawnFiles, whitePawnPositions, "black", color);
 
   // Rook on open/semi-open file
   score += evaluateRooks(whiteRookPositions, whitePawnFiles, blackPawnFiles, "white", color);
@@ -214,7 +214,7 @@ export function evaluate(state, color) {
 /**
  * Evaluate pawn structure for one color.
  */
-function evaluatePawnStructure(pawnPositions, ownPawnFiles, enemyPawnFiles, pawnColor, evalColor) {
+function evaluatePawnStructure(pawnPositions, ownPawnFiles, enemyPawnFiles, enemyPawnPositions, pawnColor, evalColor) {
   let bonus = 0;
   const sign = pawnColor === evalColor ? 1 : -1;
 
@@ -234,7 +234,7 @@ function evaluatePawnStructure(pawnPositions, ownPawnFiles, enemyPawnFiles, pawn
     }
 
     // Passed pawn bonus (no enemy pawns ahead on same or adjacent files)
-    if (isPassedPawn(file, rank, pawnColor, enemyPawnFiles, ownPawnFiles)) {
+    if (isPassedPawn(file, rank, pawnColor, enemyPawnPositions)) {
       const advancementRank = pawnColor === "white" ? rank : 7 - rank;
       bonus += PASSED_PAWN_BONUS[advancementRank];
     }
@@ -246,16 +246,28 @@ function evaluatePawnStructure(pawnPositions, ownPawnFiles, enemyPawnFiles, pawn
 /**
  * Check if a pawn is passed (no enemy pawns can block or capture it).
  */
-function isPassedPawn(file, rank, pawnColor, enemyPawnFiles, ownPawnFiles) {
-  // Simplified check: just check if there are enemy pawns on same/adjacent files
-  // A more accurate check would verify ranks, but this is a reasonable approximation
-  const hasEnemyOnFile = enemyPawnFiles[file] > 0;
-  const hasEnemyLeft = file > 0 && enemyPawnFiles[file - 1] > 0;
-  const hasEnemyRight = file < 7 && enemyPawnFiles[file + 1] > 0;
+function isPassedPawn(file, rank, pawnColor, enemyPawns) {
+  const startRank = pawnColor === "white" ? rank + 1 : rank - 1;
+  const endRank = pawnColor === "white" ? 7 : 0;
+  const rankStep = pawnColor === "white" ? 1 : -1;
 
-  // For white, pawn is passed if no enemy pawns ahead; for black, behind
-  // This is a simplification - we just check if the pawn's file is clear
-  return !hasEnemyOnFile && !hasEnemyLeft && !hasEnemyRight;
+  // Check all squares ahead of the pawn on same and adjacent files
+  for (let r = startRank; pawnColor === "white" ? r <= endRank : r >= endRank; r += rankStep) {
+    // Check same file
+    if (enemyPawns.some(p => p.file === file && p.rank === r)) {
+      return false;
+    }
+    // Check left adjacent file
+    if (file > 0 && enemyPawns.some(p => p.file === file - 1 && p.rank === r)) {
+      return false;
+    }
+    // Check right adjacent file
+    if (file < 7 && enemyPawns.some(p => p.file === file + 1 && p.rank === r)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**

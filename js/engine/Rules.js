@@ -469,99 +469,88 @@ function findKingSquare(board, color) {
 
 /**
  * Whether a given square is attacked by a specific color.
- * Uses piece-specific patterns for efficiency.
+ * Optimized: check attackers FROM target square perspective, exit early
  */
 function squareAttackedBy(state, targetSq, attackerColor) {
   const { board } = state;
   const targetIndex = algebraicToIndex(targetSq);
   const { file: tf, rank: tr } = indexToFR(targetIndex);
 
-  // Scan all attacker pieces and see if any has a legal capture on targetSq.
-  for (let i = 0; i < 64; i += 1) {
-    const piece = board[i];
-    if (!piece || getColorOf(piece) !== attackerColor) continue;
-    const type = piece[1];
-    const fromSq = indexToAlgebraic(i);
-    const { file, rank } = indexToFR(i);
+  // 1. Check knight attacks FIRST
+  const knightJumps = [
+    [1, 2], [2, 1], [2, -1], [1, -2],
+    [-1, -2], [-2, -1], [-2, 1], [-1, 2]
+  ];
+  const knightCode = attackerColor === "white" ? "wN" : "bN";
+  for (const [df, dr] of knightJumps) {
+    const f = tf + df;
+    const r = tr + dr;
+    if (f < 0 || f > 7 || r < 0 || r > 7) continue;
+    if (board[r * 8 + f] === knightCode) return true;
+  }
 
-    switch (type) {
-      case "P": {
-        const dir = attackerColor === "white" ? 1 : -1;
-        const captureRanks = rank + dir;
-        if (captureRanks === tr && Math.abs(file - tf) === 1) {
-          // Pawns attack diagonally forward; ignore occupancy details here.
-          return true;
-        }
-        break;
-      }
-      case "N": {
-        const df = Math.abs(file - tf);
-        const dr = Math.abs(rank - tr);
-        if ((df === 1 && dr === 2) || (df === 2 && dr === 1)) {
-          return true;
-        }
-        break;
-      }
-      case "B":
-      case "R":
-      case "Q": {
-        const df = tf - file;
-        const dr = tr - rank;
-        const adf = Math.abs(df);
-        const adr = Math.abs(dr);
-        let stepF = 0;
-        let stepR = 0;
+  // 2. Check pawn attacks
+  const pawnCode = attackerColor === "white" ? "wP" : "bP";
+  const pawnDir = attackerColor === "white" ? -1 : 1; // Attackers come from opposite direction
+  if (tr + pawnDir >= 0 && tr + pawnDir <= 7) {
+    if (tf > 0 && board[(tr + pawnDir) * 8 + (tf - 1)] === pawnCode) return true;
+    if (tf < 7 && board[(tr + pawnDir) * 8 + (tf + 1)] === pawnCode) return true;
+  }
 
-        if (type === "B" || type === "Q") {
-          if (adf === adr && adf > 0) {
-            stepF = df > 0 ? 1 : -1;
-            stepR = dr > 0 ? 1 : -1;
-          }
-        }
-        if (type === "R" || type === "Q") {
-          if (df === 0 && adr > 0) {
-            stepF = 0;
-            stepR = dr > 0 ? 1 : -1;
-          } else if (dr === 0 && adf > 0) {
-            stepF = df > 0 ? 1 : -1;
-            stepR = 0;
-          }
-        }
-
-        if (stepF !== 0 || stepR !== 0) {
-          let f = file + stepF;
-          let r = rank + stepR;
-          let blocked = false;
-          while (f !== tf || r !== tr) {
-            if (f < 0 || f > 7 || r < 0 || r > 7) {
-              blocked = true;
-              break;
-            }
-            if (board[r * 8 + f]) {
-              blocked = true;
-              break;
-            }
-            f += stepF;
-            r += stepR;
-          }
-          if (!blocked && f === tf && r === tr) {
-            return true;
-          }
-        }
-        break;
-      }
-      case "K": {
-        if (Math.max(Math.abs(file - tf), Math.abs(rank - tr)) === 1) {
-          return true;
-        }
-        break;
-      }
-      default:
-        break;
+  // 3. Check king attacks
+  const kingCode = attackerColor === "white" ? "wK" : "bK";
+  for (let df = -1; df <= 1; df++) {
+    for (let dr = -1; dr <= 1; dr++) {
+      if (df === 0 && dr === 0) continue;
+      const f = tf + df;
+      const r = tr + dr;
+      if (f < 0 || f > 7 || r < 0 || r > 7) continue;
+      if (board[r * 8 + f] === kingCode) return true;
     }
+  }
 
-    // fromSq is unused but kept for clarity of pattern.
-    void fromSq;
+  // 4. Check sliding pieces (bishop, rook, queen)
+  const orthogonalDirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const diagonalDirs = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+
+  const orthoCandidates = attackerColor === "white" 
+    ? ['wR', 'wQ'] 
+    : ['bR', 'bQ'];
+
+  const diagonalCandidates = attackerColor === "white"
+    ? ['wB', 'wQ']
+    : ['bB', 'bQ'];
+
+  // Check orthogonal directions first
+  for (const [df, dr] of orthogonalDirs) {
+    let f = tf + df;
+    let r = tr + dr;
+
+    while (f >= 0 && f <= 7 && r >= 0 && r <= 7) {
+      const piece = board[r * 8 + f];
+      if (piece) {
+        if (orthoCandidates.includes(piece)) return true;
+        break; // Blocked by any piece
+      }
+      f += df;
+      r += dr;
+    }
+  }
+
+  // Check diagonal directions
+  for (const [df, dr] of diagonalDirs) {
+    let f = tf + df;
+    let r = tr + dr;
+
+    while (f >= 0 && f <= 7 && r >= 0 && r <= 7) {
+      const piece = board[r * 8 + f];
+      if (piece) {
+        if (diagonalCandidates.includes(piece)) return true;
+        break; // Blocked by any piece
+      }
+      f += df;
+      r += dr;
+    }
   }
 
   return false;
@@ -577,7 +566,10 @@ function leavesKingInCheck(state, move) {
   const clone = {
     board: state.board.slice(),
     activeColor: state.activeColor,
-    castlingRights: JSON.parse(JSON.stringify(state.castlingRights)),
+    castlingRights: {
+      white: { ...state.castlingRights.white },
+      black: { ...state.castlingRights.black }
+    },
     enPassantTarget: state.enPassantTarget,
   };
 

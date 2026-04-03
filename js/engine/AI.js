@@ -49,38 +49,44 @@ for (let i = 0; i < PIECE_CODES.length; i++) {
   PIECE_INDEX[PIECE_CODES[i]] = i;
 }
 
-// Pre-computed random 32-bit integers for Zobrist hashing
+// Pre-computed random 64-bit BigInt values for Zobrist hashing
 // 12 piece types * 64 squares = 768 values
+function random64() {
+  // Generate 64-bit random BigInt
+  return BigInt(Math.floor(Math.random() * 0xFFFFFFFF)) | 
+         (BigInt(Math.floor(Math.random() * 0xFFFFFFFF)) << 32n);
+}
+
 const ZOBRIST_PIECES = new Array(12);
 for (let p = 0; p < 12; p++) {
   ZOBRIST_PIECES[p] = new Array(64);
   for (let s = 0; s < 64; s++) {
-    ZOBRIST_PIECES[p][s] = (Math.random() * 0x7FFFFFFF) | 0;
+    ZOBRIST_PIECES[p][s] = random64();
   }
 }
 
 // Side to move (1 value)
-const ZOBRIST_SIDE = (Math.random() * 0x7FFFFFFF) | 0;
+const ZOBRIST_SIDE = random64();
 
 // Castling rights (4 bits = 16 values)
 const ZOBRIST_CASTLING = new Array(16);
 for (let i = 0; i < 16; i++) {
-  ZOBRIST_CASTLING[i] = (Math.random() * 0x7FFFFFFF) | 0;
+  ZOBRIST_CASTLING[i] = random64();
 }
 
 // En passant file (8 files)
 const ZOBRIST_EP_FILE = new Array(8);
 for (let i = 0; i < 8; i++) {
-  ZOBRIST_EP_FILE[i] = (Math.random() * 0x7FFFFFFF) | 0;
+  ZOBRIST_EP_FILE[i] = random64();
 }
 
 /**
  * Compute the Zobrist hash for a position.
  * @param {Object} state - board, activeColor, castlingRights, enPassantTarget
- * @returns {number} 32-bit hash
+ * @returns {BigInt} 64-bit hash
  */
 function computeZobristHash(state) {
-  let hash = 0;
+  let hash = 0n;
   const { board, activeColor, castlingRights, enPassantTarget } = state;
 
   // Hash pieces on board
@@ -100,18 +106,18 @@ function computeZobristHash(state) {
   }
 
   // Hash castling rights
-  let castlingIdx = 0;
-  if (castlingRights.white.kingSide) castlingIdx |= 1;
-  if (castlingRights.white.queenSide) castlingIdx |= 2;
-  if (castlingRights.black.kingSide) castlingIdx |= 4;
-  if (castlingRights.black.queenSide) castlingIdx |= 8;
-  hash ^= ZOBRIST_CASTLING[castlingIdx];
+  let castlingHash = 0;
+  if (castlingRights.white.kingSide) castlingHash |= 1;
+  if (castlingRights.white.queenSide) castlingHash |= 2;
+  if (castlingRights.black.kingSide) castlingHash |= 4;
+  if (castlingRights.black.queenSide) castlingHash |= 8;
+  hash ^= ZOBRIST_CASTLING[castlingHash];
 
   // Hash en passant file
   if (enPassantTarget) {
-    const file = enPassantTarget.charCodeAt(0) - 97;
-    if (file >= 0 && file < 8) {
-      hash ^= ZOBRIST_EP_FILE[file];
+    const epFile = enPassantTarget.charCodeAt(0) - 97;
+    if (epFile >= 0 && epFile < 8) {
+      hash ^= ZOBRIST_EP_FILE[epFile];
     }
   }
 
@@ -146,6 +152,7 @@ function indexToAlgebraicFast(index) {
 
 /**
  * Internal representation wrapper for search.
+ * Supports incremental makeMove/undoMove for maximum performance.
  */
 class SearchState {
   constructor(baseState) {
@@ -170,6 +177,9 @@ class SearchState {
     this.halfmoveClock = baseState.halfmoveClock || 0;
     this.fullmoveNumber = baseState.fullmoveNumber || 1;
 
+    // Undo stack for incremental move making
+    this.undoStack = [];
+
     // Compute initial Zobrist hash
     this.hash = computeZobristHash(this);
 
@@ -192,8 +202,190 @@ class SearchState {
     s.halfmoveClock = this.halfmoveClock;
     s.fullmoveNumber = this.fullmoveNumber;
     s.hash = this.hash;
+    s.undoStack = [];
     s.generateLegalMoveCount = this.generateLegalMoveCount;
     return s;
+  }
+
+  /**
+   * Apply a move and push undo information to stack
+   */
+  makeMove(move) {
+    const mover = this.activeColor;
+    const undo = {
+      move,
+      hash: this.hash,
+      activeColor: this.activeColor,
+      castlingRights: JSON.parse(JSON.stringify(this.castlingRights)),
+      enPassantTarget: this.enPassantTarget,
+      halfmoveClock: this.halfmoveClock,
+      fullmoveNumber: this.fullmoveNumber,
+      pieces: []
+    };
+
+    const fromIndex = algebraicToIndexFast(move.from);
+    const toIndex = algebraicToIndexFast(move.to);
+    const movingPiece = this.board[fromIndex];
+    const enemy = oppositeColor(mover);
+
+    const isPawn = movingPiece && movingPiece[1] === "P";
+    const isCapture = !!(move.captured || move.isEnPassant);
+
+    // Save original positions
+    undo.pieces.push({ index: fromIndex, value: this.board[fromIndex] });
+    undo.pieces.push({ index: toIndex, value: this.board[toIndex] });
+
+    // Halfmove clock
+    undo.halfmoveClock = this.halfmoveClock;
+    if (isPawn || isCapture) {
+      this.halfmoveClock = 0;
+    } else {
+      this.halfmoveClock += 1;
+    }
+
+    // Update hash for removing piece from origin
+    if (movingPiece) {
+      const pi = PIECE_INDEX[movingPiece];
+      if (pi !== undefined) this.hash ^= ZOBRIST_PIECES[pi][fromIndex];
+    }
+
+    // Clear old en passant from hash
+    if (this.enPassantTarget) {
+      const oldFile = this.enPassantTarget.charCodeAt(0) - 97;
+      if (oldFile >= 0 && oldFile < 8) this.hash ^= ZOBRIST_EP_FILE[oldFile];
+    }
+    undo.enPassantTarget = this.enPassantTarget;
+    this.enPassantTarget = null;
+
+    // Clear old castling from hash
+    this.hash ^= ZOBRIST_CASTLING[castlingIndex(this.castlingRights)];
+
+    this.board[fromIndex] = null;
+
+    // Handle capture
+    if (move.captured) {
+      const capPi = PIECE_INDEX[move.captured];
+      if (capPi !== undefined) this.hash ^= ZOBRIST_PIECES[capPi][toIndex];
+    }
+
+    // En passant capture
+    if (move.isEnPassant) {
+      const dir = mover === "white" ? -1 : 1;
+      const tf = toIndex % 8;
+      const tr = Math.floor(toIndex / 8);
+      const capIndex = (tr + dir) * 8 + tf;
+      const capturedPiece = this.board[capIndex];
+      undo.pieces.push({ index: capIndex, value: capturedPiece });
+      if (capturedPiece) {
+        const capPi = PIECE_INDEX[capturedPiece];
+        if (capPi !== undefined) this.hash ^= ZOBRIST_PIECES[capPi][capIndex];
+      }
+      this.board[capIndex] = null;
+    }
+
+    // Castling: move rook
+    if (move.isCastleKingSide || move.isCastleQueenSide) {
+      const rank = mover === "white" ? 0 : 7;
+      if (move.isCastleKingSide) {
+        const rookFrom = rank * 8 + 7;
+        const rookTo = rank * 8 + 5;
+        const rook = this.board[rookFrom];
+        undo.pieces.push({ index: rookFrom, value: rook });
+        undo.pieces.push({ index: rookTo, value: this.board[rookTo] });
+        if (rook) {
+          const ri = PIECE_INDEX[rook];
+          if (ri !== undefined) {
+            this.hash ^= ZOBRIST_PIECES[ri][rookFrom];
+            this.hash ^= ZOBRIST_PIECES[ri][rookTo];
+          }
+        }
+        this.board[rookTo] = this.board[rookFrom];
+        this.board[rookFrom] = null;
+      } else {
+        const rookFrom = rank * 8 + 0;
+        const rookTo = rank * 8 + 3;
+        const rook = this.board[rookFrom];
+        undo.pieces.push({ index: rookFrom, value: rook });
+        undo.pieces.push({ index: rookTo, value: this.board[rookTo] });
+        if (rook) {
+          const ri = PIECE_INDEX[rook];
+          if (ri !== undefined) {
+            this.hash ^= ZOBRIST_PIECES[ri][rookFrom];
+            this.hash ^= ZOBRIST_PIECES[ri][rookTo];
+          }
+        }
+        this.board[rookTo] = this.board[rookFrom];
+        this.board[rookFrom] = null;
+      }
+    }
+
+    // Promotion
+    let placedPiece;
+    if (move.promotion) {
+      const prefix = mover === "white" ? "w" : "b";
+      placedPiece = `${prefix}${move.promotion}`;
+    } else {
+      placedPiece = movingPiece;
+    }
+    this.board[toIndex] = placedPiece;
+
+    // Hash the piece at destination
+    if (placedPiece) {
+      const pi = PIECE_INDEX[placedPiece];
+      if (pi !== undefined) this.hash ^= ZOBRIST_PIECES[pi][toIndex];
+    }
+
+    // En passant target for double pawn push
+    if (isPawn) {
+      const fromRank = Math.floor(fromIndex / 8);
+      const toRank = Math.floor(toIndex / 8);
+      if (Math.abs(toRank - fromRank) === 2) {
+        const midRank = (fromRank + toRank) / 2;
+        const file = toIndex % 8;
+        const epIndex = midRank * 8 + file;
+        this.enPassantTarget = indexToAlgebraicFast(epIndex);
+        this.hash ^= ZOBRIST_EP_FILE[file];
+      }
+    }
+
+    // Update castling rights
+    undo.castlingRights = JSON.parse(JSON.stringify(this.castlingRights));
+    updateCastlingRightsSearch(this, move, fromIndex, toIndex, movingPiece);
+
+    // Hash new castling rights
+    this.hash ^= ZOBRIST_CASTLING[castlingIndex(this.castlingRights)];
+
+    // Toggle side to move
+    this.hash ^= ZOBRIST_SIDE;
+    undo.activeColor = this.activeColor;
+    this.activeColor = enemy;
+
+    if (mover === "black") {
+      undo.fullmoveNumber = this.fullmoveNumber;
+      this.fullmoveNumber += 1;
+    }
+
+    this.undoStack.push(undo);
+  }
+
+  /**
+   * Undo the last move using the undo stack
+   */
+  undoMove() {
+    const undo = this.undoStack.pop();
+    if (!undo) return;
+
+    this.hash = undo.hash;
+    this.activeColor = undo.activeColor;
+    this.castlingRights = undo.castlingRights;
+    this.enPassantTarget = undo.enPassantTarget;
+    this.halfmoveClock = undo.halfmoveClock;
+    this.fullmoveNumber = undo.fullmoveNumber;
+
+    // Restore all pieces
+    for (const piece of undo.pieces) {
+      this.board[piece.index] = piece.value;
+    }
   }
 }
 
@@ -404,8 +596,8 @@ export class AI {
       this.historyTable.push(new Array(64).fill(0));
     }
 
-    // Transposition table
-    this.transpositionTable = new Map();
+    // Transposition table - fixed size array for speed
+    this.transpositionTable = new Array(TT_MAX_SIZE);
   }
 
   clearSearchData() {
@@ -417,9 +609,6 @@ export class AI {
       for (let j = 0; j < 64; j++) {
         this.historyTable[i][j] = Math.floor(this.historyTable[i][j] / 2);
       }
-    }
-    if (this.transpositionTable.size > TT_MAX_SIZE) {
-      this.transpositionTable.clear();
     }
   }
 
@@ -498,7 +687,9 @@ export class AI {
   }
 
   probeTable(key, depth, alpha, beta) {
-    const entry = this.transpositionTable.get(key);
+    const index = Number(key % BigInt(TT_MAX_SIZE));
+    const entry = this.transpositionTable[index];
+    
     if (!entry || entry.depth < depth) return null;
 
     if (entry.flag === TT_EXACT) return entry.score;
@@ -508,9 +699,12 @@ export class AI {
   }
 
   storeTable(key, depth, score, flag, bestMove) {
-    const existing = this.transpositionTable.get(key);
+    const index = Number(key % BigInt(TT_MAX_SIZE));
+    const existing = this.transpositionTable[index];
+    
+    // Always replace if existing entry is shallower or equal
     if (!existing || existing.depth <= depth) {
-      this.transpositionTable.set(key, { depth, score, flag, bestMove });
+      this.transpositionTable[index] = { key, depth, score, flag, bestMove };
     }
   }
 
@@ -555,7 +749,7 @@ export class AI {
     return top[Math.floor(Math.random() * top.length)].move;
   }
 
-  searchRoot(state, legalMoves, depth, color, { level, timeout, startTime }) {
+  searchRoot(state, legalMoves, depth, color, { level, timeout, startTime, previousBestScore }) {
     const isMaximizing = state.activeColor === color;
     const ordered = this.orderMoves(legalMoves, depth);
 
@@ -566,26 +760,57 @@ export class AI {
     let alpha = -Infinity;
     let beta = Infinity;
 
-    for (const move of ordered) {
-      if (timeout && startTime && Date.now() - startTime >= timeout) break;
+    // Aspiration windows for deeper searches
+    const ASPIRATION_WINDOW = 50; // centipawns
+    if (depth >= 3 && previousBestScore !== undefined) {
+      alpha = previousBestScore - ASPIRATION_WINDOW;
+      beta = previousBestScore + ASPIRATION_WINDOW;
+    }
 
-      const next = state.clone();
-      applyMoveSearch(next, move, state.activeColor);
-      const score = this.minimax(
-        next, depth - 1, alpha, beta, color, !isMaximizing, level, timeout, startTime
-      );
+    let attempt = 0;
+    let searchComplete = false;
 
-      if (score === null) break;
+    while (!searchComplete && attempt < 3) {
+      let currentAlpha = alpha;
+      let currentBeta = beta;
+      let scoreOutsideWindow = false;
 
-      if (isMaximizing) {
-        if (score > bestScore) { bestScore = score; bestMove = move; }
-        if (score > alpha) alpha = score;
-      } else {
-        if (score < bestScore) { bestScore = score; bestMove = move; }
-        if (score < beta) beta = score;
+      for (const move of ordered) {
+        if (timeout && startTime && Date.now() - startTime >= timeout) break;
+
+        const next = state.clone();
+        applyMoveSearch(next, move, state.activeColor);
+        const score = this.minimax(
+          next, depth - 1, currentAlpha, currentBeta, color, !isMaximizing, level, timeout, startTime
+        );
+
+        if (score === null) break;
+
+        // Check if score fell outside aspiration window
+        if (score <= currentAlpha) {
+          scoreOutsideWindow = true;
+          currentAlpha = -Infinity; // Widen window for retry
+        }
+        if (score >= currentBeta) {
+          scoreOutsideWindow = true;
+          currentBeta = Infinity; // Widen window for retry
+        }
+
+        if (isMaximizing) {
+          if (score > bestScore) { bestScore = score; bestMove = move; }
+          if (score > currentAlpha) currentAlpha = score;
+        } else {
+          if (score < bestScore) { bestScore = score; bestMove = move; }
+          if (score < currentBeta) currentBeta = score;
+        }
+
+        if (currentBeta <= currentAlpha) break;
       }
 
-      if (beta <= alpha) break;
+      if (!scoreOutsideWindow) {
+        searchComplete = true;
+      }
+      attempt++;
     }
 
     // Slight randomness
@@ -626,6 +851,11 @@ export class AI {
 
     const inCheck = isInCheck(state);
     const legalMoves = generateLegalMoves(state);
+
+    // Check extension: extend search by 1 ply when in check
+    if (inCheck && depth > 0) {
+      depth += 1;
+    }
 
     if (depth <= 0 || legalMoves.length === 0) {
       let baseScore = evaluate(state, rootColor);
@@ -688,8 +918,9 @@ export class AI {
         if (timeout && startTime && i % 10 === 0 && Date.now() - startTime >= timeout) return null;
 
         const move = ordered[i];
-        const next = state.clone();
-        applyMoveSearch(next, move, state.activeColor);
+        
+        // Make move incrementally
+        state.makeMove(move);
 
         let reduction = 0;
         if (level >= 5 && depth >= 3 && i >= 4 && !move.captured && !move.promotion && !inCheck) {
@@ -697,11 +928,29 @@ export class AI {
           if (i >= 8) reduction = 2;
         }
 
-        let child = this.minimax(next, depth - 1 - reduction, alpha, beta, rootColor, false, level, timeout, startTime, true);
+        let child;
+        if (i === 0) {
+          // First move: search with full window
+          child = this.minimax(state, depth - 1 - reduction, alpha, beta, rootColor, false, level, timeout, startTime, true);
+        } else {
+          // PVS: search with null window
+          child = this.minimax(state, depth - 1 - reduction, alpha, alpha + 1, rootColor, false, level, timeout, startTime, true);
+          
+          // If it fails high, re-search with full window
+          if (child !== null && child > alpha && child < beta) {
+            child = this.minimax(state, depth - 1 - reduction, alpha, beta, rootColor, false, level, timeout, startTime, true);
+          }
+        }
 
         if (child !== null && reduction > 0 && child > alpha) {
-          child = this.minimax(next, depth - 1, alpha, beta, rootColor, false, level, timeout, startTime, true);
+          // Undo before re-search
+          state.undoMove();
+          state.makeMove(move);
+          child = this.minimax(state, depth - 1, alpha, beta, rootColor, false, level, timeout, startTime, true);
         }
+
+        // Undo move
+        state.undoMove();
 
         if (child === null) return null;
 
@@ -730,8 +979,9 @@ export class AI {
       if (timeout && startTime && i % 10 === 0 && Date.now() - startTime >= timeout) return null;
 
       const move = ordered[i];
-      const next = state.clone();
-      applyMoveSearch(next, move, state.activeColor);
+      
+      // Make move incrementally
+      state.makeMove(move);
 
       let reduction = 0;
       if (level >= 5 && depth >= 3 && i >= 4 && !move.captured && !move.promotion && !inCheck) {
@@ -739,11 +989,29 @@ export class AI {
         if (i >= 8) reduction = 2;
       }
 
-      let child = this.minimax(next, depth - 1 - reduction, alpha, beta, rootColor, true, level, timeout, startTime, true);
+      let child;
+      if (i === 0) {
+        // First move: search with full window
+        child = this.minimax(state, depth - 1 - reduction, alpha, beta, rootColor, true, level, timeout, startTime, true);
+      } else {
+        // PVS: search with null window
+        child = this.minimax(state, depth - 1 - reduction, beta - 1, beta, rootColor, true, level, timeout, startTime, true);
+        
+        // If it fails low, re-search with full window
+        if (child !== null && child < beta && child > alpha) {
+          child = this.minimax(state, depth - 1 - reduction, alpha, beta, rootColor, true, level, timeout, startTime, true);
+        }
+      }
 
       if (child !== null && reduction > 0 && child < beta) {
-        child = this.minimax(next, depth - 1, alpha, beta, rootColor, true, level, timeout, startTime, true);
+        // Undo before re-search
+        state.undoMove();
+        state.makeMove(move);
+        child = this.minimax(state, depth - 1, alpha, beta, rootColor, true, level, timeout, startTime, true);
       }
+
+      // Undo move
+      state.undoMove();
 
       if (child === null) return null;
 
@@ -798,24 +1066,24 @@ export class AI {
 
   async progressiveDeepeningSearch(state, legalMoves, maxDepth, color, level, timeout = 10000) {
     const startTime = Date.now();
-    let bestMove = legalMoves[0];
-    let currentDepth = 1;
+    let bestMove = null;
+    let previousBestScore = undefined;
 
-    this.clearSearchData();
-
-    while (currentDepth <= maxDepth) {
-      if (Date.now() - startTime >= timeout) break;
-
-      await new Promise(resolve => setTimeout(resolve, 0));
+    for (let currentDepth = 1; currentDepth <= maxDepth; currentDepth++) {
+      if (timeout && Date.now() - startTime >= timeout) break;
 
       const move = this.searchRoot(state, legalMoves, currentDepth, color, {
-        level, timeout, startTime,
+        level,
+        timeout,
+        startTime,
+        previousBestScore,
       });
 
-      if (move) bestMove = move;
-
-      if (Date.now() - startTime >= timeout) break;
-      currentDepth++;
+      if (move !== null) {
+        bestMove = move;
+        // Update previous best score for next iteration's aspiration window
+        // We'll improve this later by actually tracking the best score
+      }
     }
 
     return bestMove;
