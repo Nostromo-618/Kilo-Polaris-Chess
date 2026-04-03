@@ -83,6 +83,9 @@
   grid-row: 1;
   width: 100%;
   min-width: 0;
+  /* Prevent grid row stretch from overriding aspect-ratio (mobile / narrow viewports). */
+  align-self: start;
+  height: auto;
   aspect-ratio: 1 / 1;
   display: grid;
   grid-template-columns: repeat(8, 1fr);

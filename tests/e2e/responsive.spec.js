@@ -124,6 +124,16 @@ test.describe('Responsive Layout', () => {
             expect(boardBox.height).toBeLessThanOrEqual(667);
         });
 
+        test('chess squares should stay square (1:1) on narrow viewports', async ({ page }) => {
+            const square = page.locator('.chess-square[data-square="e4"]');
+            await expect(square).toBeVisible();
+            const box = await square.boundingBox();
+            expect(box).not.toBeNull();
+            const ratio = box.width > 0 ? box.height / box.width : 0;
+            expect(ratio).toBeGreaterThan(0.97);
+            expect(ratio).toBeLessThan(1.03);
+        });
+
         test('controls should be accessible on mobile', async ({ page }) => {
             await expect(page.locator('#new-game-btn')).toBeVisible();
             await expect(page.locator('#difficulty-select')).toBeVisible();
