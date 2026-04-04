@@ -1,6 +1,6 @@
 {
   "name": "Kilo Polaris Chess",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A pure client-side chess game implementation that runs entirely in the browser. All computation happens on the client side, making it perfect for static hosting on GitHub Pages.",
   "directories": {
     "test": "tests"
@@ -12,7 +12,14 @@
     "test:full-game:headed": "playwright test --grep 'Full Game Tests' --headed",
     "test:all": "playwright test",
     "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed"
+    "test:headed": "playwright test --headed",
+    "test:unit": "playwright test tests/unit/",
+    "test:integration": "playwright test tests/integration/",
+    "test:performance": "playwright test tests/performance/",
+    "test:accessibility": "playwright test tests/accessibility/",
+    "test:security": "playwright test tests/security/",
+    "test:ai": "playwright test tests/unit/engine/AI.spec.js",
+    "test:coverage": "playwright test --coverage"
   },
   "repository": {
     "type": "git",
