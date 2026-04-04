@@ -13,8 +13,8 @@ test.describe('E2E Integration - Complete Game Flow', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
-        await page.locator('#difficulty-select').selectOption('1');
-        await page.locator('#thinking-time').fill('1');
+        await page.locator('#difficulty-choice button[data-level="1"]').click();
+        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     /**
@@ -178,8 +178,8 @@ test.describe('E2E Integration - Game Recovery', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
-        await page.locator('#difficulty-select').selectOption('1');
-        await page.locator('#thinking-time').fill('1');
+        await page.locator('#difficulty-choice button[data-level="1"]').click();
+        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     test('should save game state to localStorage', async ({ page }) => {
@@ -243,7 +243,7 @@ test.describe('E2E Integration - Game Recovery', () => {
     });
 
     test('should restore difficulty on reload', async ({ page }) => {
-        await page.selectOption('#difficulty-select', '4');
+        await page.locator('#difficulty-choice button[data-level="4"]').click();
         await page.click('#new-game-btn');
         await page.waitForTimeout(300);
 
@@ -251,7 +251,9 @@ test.describe('E2E Integration - Game Recovery', () => {
         await page.reload();
         await page.waitForTimeout(300);
 
-        const value = await page.locator('#difficulty-select').inputValue();
+        const value = await page.evaluate(() =>
+            document.querySelector('#difficulty-choice button.vd-is-active')?.getAttribute('data-level')
+        );
         expect(value).toBe('4');
     });
 
@@ -316,8 +318,8 @@ test.describe('E2E Integration - Concurrent Operations', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
-        await page.locator('#difficulty-select').selectOption('1');
-        await page.locator('#thinking-time').fill('1');
+        await page.locator('#difficulty-choice button[data-level="1"]').click();
+        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     test('should handle rapid clicks gracefully', async ({ page }) => {
@@ -351,7 +353,7 @@ test.describe('E2E Integration - Concurrent Operations', () => {
         await page.waitForSelector('.chess-piece:has-text("♙")');
 
         // Change difficulty
-        await page.selectOption('#difficulty-select', '3');
+        await page.locator('#difficulty-choice button[data-level="3"]').click();
 
         // Game should continue
         const pieces = await page.locator('.chess-piece').count();
@@ -435,8 +437,8 @@ test.describe('E2E Integration - Performance', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
-        await page.locator('#difficulty-select').selectOption('1');
-        await page.locator('#thinking-time').fill('1');
+        await page.locator('#difficulty-choice button[data-level="1"]').click();
+        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     test('should respond to moves quickly', async ({ page }) => {

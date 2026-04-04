@@ -20,7 +20,6 @@ export class Controls {
     * @param {HTMLButtonElement} options.newGameButton
     * @param {HTMLButtonElement} [options.undoButton]
     * @param {HTMLSelectElement} [options.difficultySelect]
-    * @param {HTMLInputElement} [options.thinkingTimeInput]
     * @param {() => void} options.onNewGameRequested
     * @param {() => void} [options.onUndoRequested]
     */
@@ -31,7 +30,6 @@ export class Controls {
     newGameButton,
     undoButton,
     difficultySelect,
-    thinkingTimeInput,
     onNewGameRequested,
     onUndoRequested,
   }) {
@@ -41,7 +39,6 @@ export class Controls {
     this.newGameButton = newGameButton;
     this.undoButton = undoButton || null;
     this.difficultySelect = difficultySelect || null;
-    this.thinkingTimeInput = thinkingTimeInput || null;
     this.onNewGameRequested = onNewGameRequested || (() => { });
     this.onUndoRequested = onUndoRequested || (() => { });
 
@@ -103,13 +100,6 @@ export class Controls {
       });
     }
 
-    if (this.thinkingTimeInput) {
-      this.thinkingTimeInput.setAttribute("aria-describedby", "thinking-desc");
-      this.thinkingTimeInput.addEventListener("change", () => {
-        this.selectedThinkingTime = Number(this.thinkingTimeInput.value) || 10;
-        this.syncThinkingButtons();
-      });
-    }
   }
 
   syncDifficultyButtons() {
@@ -142,9 +132,6 @@ export class Controls {
           btn.classList.remove("vd-is-active");
         }
       });
-    }
-    if (this.thinkingTimeInput) {
-      this.thinkingTimeInput.value = String(this.selectedThinkingTime);
     }
   }
 

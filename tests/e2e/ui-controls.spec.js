@@ -56,25 +56,20 @@ test.describe('UI Controls', () => {
 
     test.describe('Difficulty Selection', () => {
         test('should have all 5 difficulty levels', async ({ page }) => {
-            const difficultySelect = page.locator('#difficulty-select');
-            const options = difficultySelect.locator('option');
-            await expect(options).toHaveCount(5);
+            const buttons = page.locator('#difficulty-choice button[data-level]');
+            await expect(buttons).toHaveCount(5);
         });
 
         test('should display descriptive difficulty names', async ({ page }) => {
-            const difficultySelect = page.locator('#difficulty-select');
-
-            await expect(difficultySelect.locator('option[value="1"]')).toContainText('Very Easy');
-            await expect(difficultySelect.locator('option[value="3"]')).toContainText('Medium');
-            await expect(difficultySelect.locator('option[value="5"]')).toContainText('Very Hard');
+            await expect(page.locator('#difficulty-choice button[data-level="1"]')).toHaveAttribute('title', 'Very Easy');
+            await expect(page.locator('#difficulty-choice button[data-level="3"]')).toHaveAttribute('title', 'Medium');
+            await expect(page.locator('#difficulty-choice button[data-level="5"]')).toHaveAttribute('title', 'Very Hard');
         });
 
         test('should allow changing difficulty', async ({ page }) => {
-            const difficultySelect = page.locator('#difficulty-select');
-
             for (const level of ['1', '2', '3', '4', '5']) {
-                await difficultySelect.selectOption(level);
-                await expect(difficultySelect).toHaveValue(level);
+                await page.locator(`#difficulty-choice button[data-level="${level}"]`).click();
+                await expect(page.locator(`#difficulty-choice button[data-level="${level}"]`)).toHaveClass(/vd-is-active/);
             }
         });
     });
@@ -122,28 +117,19 @@ test.describe('UI Controls', () => {
     });
 
     test.describe('Maximum Thinking Time', () => {
-        test('should have thinking time input', async ({ page }) => {
-            const thinkingTime = page.locator('#thinking-time');
-            await expect(thinkingTime).toBeVisible();
-            await expect(thinkingTime).toHaveAttribute('type', 'number');
+        test('should have preset thinking time buttons', async ({ page }) => {
+            const group = page.locator('#thinking-choice');
+            await expect(group).toBeVisible();
+            await expect(group.locator('button[data-time]')).toHaveCount(5);
         });
 
         test('should default to 10 seconds', async ({ page }) => {
-            const thinkingTime = page.locator('#thinking-time');
-            await expect(thinkingTime).toHaveValue('10');
+            await expect(page.locator('#thinking-choice button[data-time="10"]')).toHaveClass(/vd-is-active/);
         });
 
         test('should allow changing thinking time', async ({ page }) => {
-            const thinkingTime = page.locator('#thinking-time');
-            await thinkingTime.fill('5');
-            await expect(thinkingTime).toHaveValue('5');
-        });
-
-        test('should respect min/max constraints', async ({ page }) => {
-            const thinkingTime = page.locator('#thinking-time');
-
-            await expect(thinkingTime).toHaveAttribute('min', '1');
-            await expect(thinkingTime).toHaveAttribute('max', '60');
+            await page.locator('#thinking-choice button[data-time="5"]').click();
+            await expect(page.locator('#thinking-choice button[data-time="5"]')).toHaveClass(/vd-is-active/);
         });
     });
 });

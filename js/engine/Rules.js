@@ -468,6 +468,16 @@ function findKingSquare(board, color) {
 }
 
 /**
+ * If the side to move is in check, return that side's king square; otherwise null.
+ * @param {Object} state - rules state
+ * @returns {string|null}
+ */
+export function getCheckedKingSquare(state) {
+  if (!isInCheck(state)) return null;
+  return findKingSquare(state.board, state.activeColor);
+}
+
+/**
  * Whether a given square is attacked by a specific color.
  * Optimized: check attackers FROM target square perspective, exit early
  */

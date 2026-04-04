@@ -40,7 +40,7 @@ test.describe('AI Levels - Smoke Tests', () => {
             await page.reload();
 
             // Set difficulty level
-            await page.locator('#difficulty-select').selectOption(String(level));
+            await page.locator(`#difficulty-choice button[data-level="${level}"]`).click();
 
             // Start new game
             await page.click('#new-game-btn');
@@ -78,10 +78,10 @@ test.describe('AI Levels - Full Game Tests', () => {
             await page.reload();
 
             // Set difficulty level
-            await page.locator('#difficulty-select').selectOption(String(level));
+            await page.locator(`#difficulty-choice button[data-level="${level}"]`).click();
 
             // Set shorter thinking time for faster tests
-            await page.fill('#thinking-time', '3');
+            await page.locator('#thinking-choice button[data-time="5"]').click();
 
             // Start new game
             await page.click('#new-game-btn');

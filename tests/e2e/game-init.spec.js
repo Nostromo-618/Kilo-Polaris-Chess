@@ -34,8 +34,7 @@ test.describe('Game Initialization', () => {
     });
 
     test('should display default difficulty as Level 3', async ({ page }) => {
-        const difficultySelect = page.locator('#difficulty-select');
-        await expect(difficultySelect).toHaveValue('3');
+        await expect(page.locator('#difficulty-choice button[data-level="3"]')).toHaveClass(/vd-is-active/);
     });
 
     test('should start new game when clicking New Game', async ({ page }) => {
@@ -85,12 +84,10 @@ test.describe('Game Initialization', () => {
     });
 
     test('should allow changing difficulty levels', async ({ page }) => {
-        const difficultySelect = page.locator('#difficulty-select');
+        await page.locator('#difficulty-choice button[data-level="1"]').click();
+        await expect(page.locator('#difficulty-choice button[data-level="1"]')).toHaveClass(/vd-is-active/);
 
-        await difficultySelect.selectOption('1');
-        await expect(difficultySelect).toHaveValue('1');
-
-        await difficultySelect.selectOption('5');
-        await expect(difficultySelect).toHaveValue('5');
+        await page.locator('#difficulty-choice button[data-level="5"]').click();
+        await expect(page.locator('#difficulty-choice button[data-level="5"]')).toHaveClass(/vd-is-active/);
     });
 });

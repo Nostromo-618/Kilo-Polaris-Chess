@@ -33,43 +33,29 @@ test.describe('Security - Input Validation', () => {
     });
 
     test('should validate difficulty input', async ({ page }) => {
-        // Try to set invalid difficulty
-        await page.evaluate(() => {
-            const select = document.querySelector('#difficulty-select');
-            if (select) {
-                select.value = '999';
-            }
-        });
+        await page.evaluate(() => localStorage.setItem('kpc-difficulty', '999'));
+        await page.reload();
+        await page.waitForTimeout(200);
 
-        // Should fallback to valid value
-        const value = await page.locator('#difficulty-select').inputValue();
-        expect(['1', '2', '3', '4', '5']).toContain(value);
+        const level = await page.evaluate(() =>
+            document.querySelector('#difficulty-choice button.vd-is-active')?.getAttribute('data-level')
+        );
+        expect(level).toBeTruthy();
+        expect(Number(level)).toBeGreaterThanOrEqual(1);
+        expect(Number(level)).toBeLessThanOrEqual(5);
     });
 
-    test('should validate thinking time input', async ({ page }) => {
-        // Try negative value
-        await page.fill('#thinking-time', '-5');
+    test('should validate thinking time from storage', async ({ page }) => {
+        await page.evaluate(() => localStorage.setItem('kpc-thinking-time', '999'));
+        await page.reload();
+        await page.waitForTimeout(200);
 
-        // Should be clamped to minimum
-        const value = await page.locator('#thinking-time').inputValue();
-        expect(parseInt(value)).toBeGreaterThanOrEqual(1);
-    });
-
-    test('should handle oversized thinking time', async ({ page }) => {
-        // Try very large value
-        await page.fill('#thinking-time', '999999');
-
-        // Should be clamped to maximum
-        const value = await page.locator('#thinking-time').inputValue();
-        expect(parseInt(value)).toBeLessThanOrEqual(60);
-    });
-
-    test('should reject non-numeric thinking time', async ({ page }) => {
-        await page.fill('#thinking-time', 'abc');
-
-        // Should fallback to default
-        const value = await page.locator('#thinking-time').inputValue();
-        expect(value).toBeDefined();
+        const active = await page.evaluate(() =>
+            document.querySelector('#thinking-choice button.vd-is-active')?.getAttribute('data-time')
+        );
+        expect(active).toBeTruthy();
+        expect(Number(active)).toBeGreaterThanOrEqual(1);
+        expect(Number(active)).toBeLessThanOrEqual(60);
     });
 });
 

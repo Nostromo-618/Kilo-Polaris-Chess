@@ -1,6 +1,6 @@
 {
   "name": "Kilo Polaris Chess",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "A pure client-side chess game implementation that runs entirely in the browser. All computation happens on the client side, making it perfect for static hosting on GitHub Pages.",
   "directories": {
     "test": "tests"

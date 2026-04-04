@@ -423,7 +423,7 @@ test.describe('AI - Difficulty Levels', () => {
     test('should select best move at level 1 with randomness', async ({ page }) => {
         test.slow();
 
-        await page.locator('#difficulty-select').selectOption('1');
+        await page.locator('#difficulty-choice button[data-level="1"]').click();
 
         // Make a move and verify AI responds
         await page.click('.chess-square[data-square="e2"]');
@@ -446,8 +446,8 @@ test.describe('AI - Difficulty Levels', () => {
         test.slow();
 
         // Test at level 5
-        await page.locator('#difficulty-select').selectOption('5');
-        await page.locator('#thinking-time').fill('2');
+        await page.locator('#difficulty-choice button[data-level="5"]').click();
+        await page.locator('#thinking-choice button[data-time="5"]').click();
 
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');

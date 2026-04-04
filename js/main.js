@@ -30,9 +30,10 @@ import {
  *   - Desktop board size         via storage.{get,set}BoardSize
  */
 
-const BOARD_SIZE_MIN_PX = 320;
+const BOARD_SIZE_MIN_PX = 400;
 const BOARD_SIZE_MAX_PX = 800;
-const BOARD_SIZE_SLIDER_DEFAULT = 80;
+/** First visit: max board width (slider 100 → 800px) */
+const BOARD_SIZE_SLIDER_DEFAULT = 100;
 
 /**
  * @param {number} slider 0–100
@@ -61,8 +62,6 @@ const dom = {
   thinkingChoice: document.getElementById("thinking-choice"),
   newGameBtn: document.getElementById("new-game-btn"),
   undoBtn: document.getElementById("undo-btn"),
-  difficultySelect: document.getElementById("difficulty-select"),
-  thinkingTimeInput: document.getElementById("thinking-time"),
   statusText: document.getElementById("status-text"),
   turnIndicator: document.getElementById("turn-indicator"),
   lastMoveIndicator: document.getElementById("last-move-indicator"),
@@ -85,8 +84,6 @@ const controlsView = new Controls({
   thinkingChoiceContainer: dom.thinkingChoice,
   newGameButton: dom.newGameBtn,
   undoButton: dom.undoBtn,
-  difficultySelect: dom.difficultySelect,
-  thinkingTimeInput: dom.thinkingTimeInput,
   onNewGameRequested: handleNewGameRequested,
   onUndoRequested: handleUndoRequested,
 });
@@ -129,6 +126,7 @@ async function initializeGame() {
       lastMove: snapshot.lastMove,
       legalMoves: [],
       selected: null,
+      checkedKingSquare: game.getCheckedKingSquare(),
     });
 
     syncUIWithGame(snapshot);
@@ -171,6 +169,7 @@ async function restoreGame(savedState) {
       lastMove: snapshot.lastMove,
       legalMoves: [],
       selected: null,
+      checkedKingSquare: game.getCheckedKingSquare(),
     });
 
     syncUIWithGame(snapshot);
@@ -209,6 +208,7 @@ function handleUndoRequested() {
       selected: null,
       legalMoves: [],
       lastMove: snapshot.lastMove,
+      checkedKingSquare: game.getCheckedKingSquare(),
     });
 
     syncUIWithGame(snapshot);
@@ -229,6 +229,7 @@ async function handleSquareSelected(square) {
       selected: result.selected,
       legalMoves: result.legalTargets,
       lastMove: result.lastMove,
+      checkedKingSquare: game.getCheckedKingSquare(),
     });
     return;
   }
@@ -241,6 +242,7 @@ async function handleSquareSelected(square) {
     selected: null,
     legalMoves: [],
     lastMove: snapshot.lastMove,
+    checkedKingSquare: game.getCheckedKingSquare(),
   });
 
   updateUndoButtonState();
@@ -279,6 +281,7 @@ async function triggerAIMove() {
       selected: null,
       legalMoves: [],
       lastMove: snapshot.lastMove,
+      checkedKingSquare: game.getCheckedKingSquare(),
     });
 
     updateUndoButtonState();

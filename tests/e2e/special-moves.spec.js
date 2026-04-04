@@ -13,8 +13,8 @@ test.describe('Special Moves', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
-        await page.locator('#difficulty-select').selectOption('1');
-        await page.locator('#thinking-time').fill('1');
+        await page.locator('#difficulty-choice button[data-level="1"]').click();
+        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     /**

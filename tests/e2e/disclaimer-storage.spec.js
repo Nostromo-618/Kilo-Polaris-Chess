@@ -105,7 +105,7 @@ test.describe('LocalStorage: Difficulty Persistence', () => {
         await acceptedPage(page);
 
         // Select difficulty 4
-        await page.selectOption('#difficulty-select', '4');
+        await page.locator('#difficulty-choice button[data-level="4"]').click();
         // Trigger a new game to persist
         await page.click('#new-game-btn');
         await page.waitForTimeout(300);
@@ -122,8 +122,10 @@ test.describe('LocalStorage: Difficulty Persistence', () => {
         await page.reload();
         await page.waitForTimeout(500);
 
-        const selectVal = await page.inputValue('#difficulty-select');
-        expect(selectVal).toBe('5');
+        const activeLevel = await page.evaluate(() =>
+            document.querySelector('#difficulty-choice button.vd-is-active')?.getAttribute('data-level')
+        );
+        expect(activeLevel).toBe('5');
     });
 });
 

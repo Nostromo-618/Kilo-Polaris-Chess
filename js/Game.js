@@ -1,6 +1,6 @@
 import { GameState } from "./engine/GameState.js";
 import { AI } from "./engine/AI.js";
-import { generateLegalMoves } from "./engine/Rules.js";
+import { generateLegalMoves, getCheckedKingSquare as kingSquareIfInCheck } from "./engine/Rules.js";
 
 /**
  * Game.js
@@ -126,6 +126,14 @@ export class Game {
    */
   getBoard() {
     return this.state.getBoardMap();
+  }
+
+  /**
+   * Algebraic square of the king in check for the side to move, or null.
+   * @returns {string|null}
+   */
+  getCheckedKingSquare() {
+    return kingSquareIfInCheck(this.state.asRulesState());
   }
 
   /**

@@ -133,15 +133,19 @@ test.describe('UI Integration - Controls + Game State', () => {
     });
 
     test('should update difficulty when selecting level', async ({ page }) => {
-        await page.selectOption('#difficulty-select', '4');
-        const value = await page.locator('#difficulty-select').inputValue();
+        await page.locator('#difficulty-choice button[data-level="4"]').click();
+        const value = await page.evaluate(() =>
+            document.querySelector('#difficulty-choice button.vd-is-active')?.getAttribute('data-level')
+        );
         expect(value).toBe('4');
     });
 
-    test('should update thinking time when changing input', async ({ page }) => {
-        await page.fill('#thinking-time', '15');
-        const value = await page.locator('#thinking-time').inputValue();
-        expect(value).toBe('15');
+    test('should update thinking time when selecting preset', async ({ page }) => {
+        await page.locator('#thinking-choice button[data-time="15"]').click();
+        const active = await page.evaluate(() =>
+            document.querySelector('#thinking-choice button.vd-is-active')?.getAttribute('data-time')
+        );
+        expect(active).toBe('15');
     });
 
     test('should change color choice when clicking button', async ({ page }) => {
@@ -172,7 +176,7 @@ test.describe('UI Integration - Controls + Game State', () => {
     });
 
     test('should save difficulty to localStorage', async ({ page }) => {
-        await page.selectOption('#difficulty-select', '5');
+        await page.locator('#difficulty-choice button[data-level="5"]').click();
         await page.click('#new-game-btn');
         await page.waitForTimeout(300);
 
@@ -185,7 +189,9 @@ test.describe('UI Integration - Controls + Game State', () => {
         await page.evaluate(() => localStorage.setItem('kpc-difficulty', '3'));
         await page.reload();
 
-        const value = await page.locator('#difficulty-select').inputValue();
+        const value = await page.evaluate(() =>
+            document.querySelector('#difficulty-choice button.vd-is-active')?.getAttribute('data-level')
+        );
         expect(value).toBe('3');
     });
 });

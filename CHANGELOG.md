@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.3] - 2026-04-04
+
+### Fixed
+
+- **AI worker:** `SearchState` now calls `_computeZobristHash` (was a typo referencing `computeZobristHash`), fixing a `ReferenceError` that broke AI moves in the worker.
+- **Legal move markers:** Green dots for legal targets are absolutely centered; they no longer sit at the edge of squares when a piece is present (flex layout conflict).
+- **Board / pieces (mobile):** Piece size scales with the board using container query units (`cqmin`), not viewport (`vw`), so Unicode pieces stay centered and square cells stay consistent; legal-move pseudo-element positioning updated accordingly.
+
+### Added
+
+- **Check highlight:** When the side to move is in check, that side’s king square gets a red tint and inset border (`highlight-in-check`). Works with selection and last-move highlights via layered inset shadows.
+- **`getCheckedKingSquare(state)`** in `Rules.js` and **`getCheckedKingSquare()`** on `Game` for the UI.
+
+### Changed
+
+- **Controls:** Removed redundant **difficulty** `<select>` (levels 1–5 buttons only). Removed **thinking time** number input (5s / 10s / 15s / 30s / 60s buttons only). Associated `aria-labelledby` / `aria-describedby` wiring updated.
+- **Board size (desktop):** Minimum width from the slider maps to **400px** (was 320px); first visit defaults to **maximum** width (slider 100 → 800px). `BOARD_SIZE_MIN_PX` / default slider in `main.js`, placeholder label in `index.html`.
+- **Layout:** Desktop board column is **top-aligned** with the settings card (`align-items: flex-start` on the row and board section). Mobile board uses **fit-to-viewport** width (`min(100%, 86vw/94vw, --board-max-width)`) so narrow screens do not clip files or force a 400px-wide board without scroll.
+- **Tests:** Playwright and integration tests updated for button-only difficulty and thinking time; security tests use `localStorage` for invalid values where inputs were removed.
+- **README:** Expanded with quick start, features, tests, and stack; points to this changelog and version in `package.json`.
+
+---
+
 ## [1.1.0] - 2026-03-24
 
 ### Added

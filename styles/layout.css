@@ -14,11 +14,21 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: clamp(1.6rem, 3.2vw, 2.7rem);
+  min-width: 0;
+  min-height: 0;
+  /* Size glyphs from the board grid (see .chess-board-grid), not viewport — keeps pieces aligned to cells */
+  /* ~64% of square edge (was 6.875% of board ≈55%); small bump without crowding cells */
+  font-size: clamp(0.875rem, 8cqmin, 3.25rem);
   cursor: pointer;
   user-select: none;
   transition: background-color var(--transition-fast),
     box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+@supports not (font-size: 1cqmin) {
+  .chess-square {
+    font-size: clamp(1.6rem, 3.75vw, 2.85rem);
+  }
 }
 
 .chess-square.light {
@@ -34,13 +44,23 @@
   box-shadow: inset 0 0 0 2px var(--board-highlight);
 }
 
+/* Must not participate in flex (would sit beside .chess-piece and drift to edges) */
 .chess-square.highlight-legal::after {
   content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 26%;
   height: 26%;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
   border-radius: 999px;
   background-color: var(--board-legal-move);
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .chess-square.highlight-last-move {
@@ -48,14 +68,39 @@
   box-shadow: inset 0 0 0 2px var(--board-last-move);
 }
 
+/* Side to move is in check — king square */
+.chess-square.highlight-in-check {
+  background-color: rgba(220, 38, 38, 0.24) !important;
+  box-shadow: inset 0 0 0 3px rgba(220, 38, 38, 0.82);
+}
+
+.chess-square.highlight-in-check.highlight-selected {
+  background-color: rgba(220, 38, 38, 0.2) !important;
+  box-shadow: inset 0 0 0 2px var(--board-highlight), inset 0 0 0 5px rgba(220, 38, 38, 0.88);
+}
+
+.chess-square.highlight-in-check.highlight-last-move {
+  background-color: rgba(220, 38, 38, 0.18) !important;
+  box-shadow: inset 0 0 0 2px var(--board-last-move), inset 0 0 0 5px rgba(220, 38, 38, 0.85);
+}
+
 /* ============================================
    CHESS PIECES
    ============================================ */
 
 .chess-piece {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
   color: var(--piece-black);
-  z-index: 1;
+  z-index: 2;
+  font-size: inherit;
   line-height: 1;
+  text-align: center;
   user-select: none;
   cursor: pointer;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -69,7 +114,7 @@
 
 #board-container {
   width: 100%;
-  max-width: min(100%, var(--board-max-width, 680px));
+  max-width: min(100%, var(--board-max-width, 800px));
   margin: 0 auto;
   display: grid;
   grid-template-columns: auto 1fr;
@@ -82,7 +127,11 @@
   grid-column: 2;
   grid-row: 1;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+  /* Enable cqw/cqh/cqmin for piece sizing inside squares */
+  container-type: size;
+  container-name: chess-board;
   /* Prevent grid row stretch from overriding aspect-ratio (mobile / narrow viewports). */
   align-self: start;
   height: auto;
@@ -354,13 +403,17 @@
 }
 
 @media (min-width: 992px) {
-  /* Board section vertical centering (desktop only) */
+  /* Align board column top with sidebar card (avoid vertical centering gap) */
+  .app-main .vd-row {
+    align-items: flex-start;
+  }
+
   .board-section {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 1rem 0;
-    min-height: calc(100vh - 88px - var(--spacing-21, 21px) * 2);
+    padding: 0 0 1rem 0;
+    min-height: auto;
   }
 
   .board-size-control-desktop {
@@ -394,21 +447,24 @@
     padding: 1rem 0;
     height: fit-content;
     align-self: start;
-    overflow: hidden;
+    /* Option A: board fits column width; no horizontal scroll needed */
+    overflow-x: visible;
+    overflow-y: visible;
   }
 
   .app-main .vd-row > aside {
     order: 2;
   }
 
-  .chess-square {
-    font-size: clamp(1.85rem, 5.5vw, 2.6rem);
-  }
+  /* Piece size follows board via cqmin (no vw override) */
 
+  /* Mobile: fit viewport (sub-400px OK); square grid via .chess-board-grid aspect-ratio */
   #board-container {
     max-width: none;
-    width: min(100%, 86vw);
-    max-height: min(100%, 86vw);
+    width: min(100%, 86vw, var(--board-max-width, 800px));
+    max-height: none;
+    margin-left: auto;
+    margin-right: auto;
     overflow: hidden;
   }
 
@@ -433,18 +489,16 @@
     padding: 10px;
   }
 
-  .chess-square {
-    font-size: clamp(2.1rem, 12vw, 3rem);
-  }
-
   .chess-piece {
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
   }
 
   #board-container {
     max-width: none;
-    width: min(100%, 94vw);
-    max-height: min(100%, 94vw);
+    width: min(100%, 94vw, var(--board-max-width, 800px));
+    max-height: none;
+    margin-left: auto;
+    margin-right: auto;
     overflow: hidden;
   }
 

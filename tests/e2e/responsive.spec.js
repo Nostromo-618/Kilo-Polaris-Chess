@@ -136,7 +136,7 @@ test.describe('Responsive Layout', () => {
 
         test('controls should be accessible on mobile', async ({ page }) => {
             await expect(page.locator('#new-game-btn')).toBeVisible();
-            await expect(page.locator('#difficulty-select')).toBeVisible();
+            await expect(page.locator('#difficulty-choice')).toBeVisible();
             await expect(page.locator('[data-theme-customizer-trigger]')).toBeVisible();
         });
 

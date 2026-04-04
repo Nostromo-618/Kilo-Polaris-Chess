@@ -1,7 +1,41 @@
-# Browser Chess - Pure JavaScript
+# Kilo Polaris Chess
 
-A client-side chess game that runs entirely in the browser. All computation happens client-side.
+A pure client-side chess game that runs entirely in the browser. Play against a configurable AI with no server—ideal for static hosting (e.g. GitHub Pages).
+
+**Version:** see [`package.json`](package.json) · **History:** [CHANGELOG.md](CHANGELOG.md)
+
+## Features
+
+- Full chess rules (castling, en passant, promotion, draws, checkmate / stalemate)
+- AI search with difficulty levels (button presets), optional thinking-time presets (5s–60s), and Web Worker–based search so the UI stays responsive
+- Board size slider (desktop), theme controls, undo (player + AI ply), move history, and persisted settings via `localStorage`
+- Accessible controls (labeled groups, screen-reader text) and responsive layout (mobile board fits the viewport while keeping square cells)
+- In-check feedback: the checked king’s square is highlighted in red for the side to move
+
+## Quick start
+
+Serve the repo root as static files (the app loads ES modules from `/js`):
+
+```bash
+npx serve . -p 3000
+```
+
+Open `http://localhost:3000` (or your host). For development, any static file server works.
+
+## Tests
+
+```bash
+npm install
+npm test                 # full Playwright suite
+npm run test:quick       # excludes long “full game” AI tests
+```
+
+## Tech stack
+
+- Vanilla ES modules (no framework)
+- UI: [Vanduo](https://github.com/vanduo-oss/framework) (bundled under `dist/`)
+- Engine: move generation, rules, evaluation, and AI search under `js/engine/`
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT — see [LICENSE](LICENSE).

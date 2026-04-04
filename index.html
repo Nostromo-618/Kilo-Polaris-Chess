@@ -30,7 +30,7 @@
         <h1 class="app-title">
           <i class="ph-duotone ph-chess-piece app-title-icon" aria-hidden="true"></i>
           <span class="app-title-text">Kilo Polaris Chess</span>
-          <span class="app-version" aria-label="Version 2.0.2">v2.0.2</span>
+          <span class="app-version" aria-label="Version 2.0.3">v2.0.3</span>
         </h1>
         <div class="vd-d-flex items-center vd-gap-4">
           <button id="theme-toggle-btn" class="vd-theme-customizer-trigger" aria-label="Toggle theme">
@@ -64,15 +64,8 @@
               </div>
 
               <div class="vd-form-group">
-                <label class="vd-form-label" for="difficulty-select">Computer strength:</label>
-                <select id="difficulty-select" class="vd-form-select" aria-describedby="difficulty-desc">
-                  <option value="1">Very Easy</option>
-                  <option value="2">Easy</option>
-                  <option value="3" selected>Medium</option>
-                  <option value="4">Hard</option>
-                  <option value="5">Very Hard</option>
-                </select>
-                <div class="vd-btn-group" id="difficulty-choice" role="group" aria-label="Or select with buttons">
+                <div class="vd-form-label" id="difficulty-label">Computer strength:</div>
+                <div class="vd-btn-group" id="difficulty-choice" role="group" aria-labelledby="difficulty-label" aria-describedby="difficulty-desc">
                   <button data-level="1" class="vd-btn vd-btn-outline vd-btn-sm" title="Very Easy">1</button>
                   <button data-level="2" class="vd-btn vd-btn-outline vd-btn-sm" title="Easy">2</button>
                   <button data-level="3" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active" title="Medium">3</button>
@@ -83,9 +76,8 @@
               </div>
 
               <div class="vd-form-group">
-                <label class="vd-form-label" for="thinking-time">Maximum Thinking Time:</label>
-                <input type="number" id="thinking-time" class="vd-form-input" min="1" max="60" value="10" aria-describedby="thinking-desc" />
-                <div class="vd-btn-group" id="thinking-choice" role="group" aria-label="Or select preset times">
+                <div class="vd-form-label" id="thinking-label">Maximum Thinking Time:</div>
+                <div class="vd-btn-group" id="thinking-choice" role="group" aria-labelledby="thinking-label" aria-describedby="thinking-desc">
                   <button data-time="5" class="vd-btn vd-btn-outline vd-btn-sm">5s</button>
                   <button data-time="10" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">10s</button>
                   <button data-time="15" class="vd-btn vd-btn-outline vd-btn-sm">15s</button>
@@ -97,9 +89,9 @@
 
               <div class="vd-form-group board-size-control-desktop">
                 <label class="vd-form-label" for="board-size-range">
-                  Board size: <span id="board-size-value">704</span> px
+                  Board size: <span id="board-size-value">800</span> px
                 </label>
-                <input type="range" id="board-size-range" class="range" min="0" max="100" value="80" aria-valuemin="0" aria-valuemax="100" aria-label="Board size" />
+                <input type="range" id="board-size-range" class="range" min="0" max="100" value="100" aria-valuemin="0" aria-valuemax="100" aria-label="Board size" />
               </div>
 
               <div class="vd-form-group vd-mt-5">

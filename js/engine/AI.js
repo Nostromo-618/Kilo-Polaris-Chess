@@ -183,7 +183,7 @@ export class SearchState {
     this.undoStack = [];
 
     // Compute initial Zobrist hash
-    this.hash = computeZobristHash(this);
+    this.hash = _computeZobristHash(this);
 
     // Mobility callback
     this.generateLegalMoveCount = (color) =>

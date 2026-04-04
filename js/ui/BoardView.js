@@ -135,14 +135,16 @@ export class BoardView {
    * @param {string|null} options.selected - currently selected square.
    * @param {string[]|Set<string>} options.legalMoves - legal target squares.
    * @param {{from: string, to: string}|null} options.lastMove - last move info.
+   * @param {string|null} [options.checkedKingSquare] - king square when side to move is in check.
    */
-  render(boardState, { perspective, selected, legalMoves, lastMove }) {
+  render(boardState, { perspective, selected, legalMoves, lastMove, checkedKingSquare }) {
     this.selectedSquare = selected || null;
     this.legalTargets =
       legalMoves instanceof Set
         ? new Set(legalMoves)
         : new Set(legalMoves || []);
     this.lastMove = lastMove || null;
+    this.checkedKingSquare = checkedKingSquare || null;
     this.currentPerspective = perspective || this.currentPerspective;
 
     const ranks = perspective === "white" ? [8,7,6,5,4,3,2,1] : [1,2,3,4,5,6,7,8];
@@ -194,8 +196,13 @@ export class BoardView {
       squareEl.classList.remove(
         "highlight-selected",
         "highlight-legal",
-        "highlight-last-move"
+        "highlight-last-move",
+        "highlight-in-check"
       );
+
+      if (this.checkedKingSquare && square === this.checkedKingSquare) {
+        squareEl.classList.add("highlight-in-check");
+      }
 
       if (this.selectedSquare === square) {
         squareEl.classList.add("highlight-selected");
@@ -234,21 +241,28 @@ export class BoardView {
    * @param {string|null} options.selected
    * @param {string[]|Set<string>} options.legalMoves
    * @param {{from: string, to: string}|null} options.lastMove
+   * @param {string|null} [options.checkedKingSquare]
    */
-  updateHighlights({ selected, legalMoves, lastMove }) {
+  updateHighlights({ selected, legalMoves, lastMove, checkedKingSquare }) {
     this.selectedSquare = selected || null;
     this.legalTargets =
       legalMoves instanceof Set
         ? new Set(legalMoves)
         : new Set(legalMoves || []);
     this.lastMove = lastMove || null;
+    this.checkedKingSquare = checkedKingSquare ?? null;
 
     this.squareEls.forEach((squareEl, square) => {
       squareEl.classList.remove(
         "highlight-selected",
         "highlight-legal",
-        "highlight-last-move"
+        "highlight-last-move",
+        "highlight-in-check"
       );
+
+      if (this.checkedKingSquare && square === this.checkedKingSquare) {
+        squareEl.classList.add("highlight-in-check");
+      }
 
       if (this.selectedSquare === square) {
         squareEl.classList.add("highlight-selected");

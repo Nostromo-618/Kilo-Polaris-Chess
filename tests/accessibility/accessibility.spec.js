@@ -100,15 +100,12 @@ test.describe('Accessibility - Keyboard Navigation', () => {
         expect(pieces).toBe(32);
     });
 
-    test('should navigate difficulty select with keyboard', async ({ page }) => {
-        await page.focus('#difficulty-select');
-
-        // Change selection
-        await page.keyboard.press('ArrowDown');
-        await page.keyboard.press('ArrowDown');
-
-        const value = await page.locator('#difficulty-select').inputValue();
-        expect(value).toBeDefined();
+    test('should navigate difficulty buttons with keyboard', async ({ page }) => {
+        const level1 = page.locator('#difficulty-choice button[data-level="1"]');
+        await level1.focus();
+        await page.keyboard.press('Tab');
+        const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-level'));
+        expect(focused).toBe('2');
     });
 
     test('should close modal with Escape key', async ({ page }) => {
@@ -352,11 +349,11 @@ test.describe('Accessibility - ARIA Attributes', () => {
         expect(expanded).toBeDefined();
     });
 
-    test('should have aria-describedby on form elements', async ({ page }) => {
-        const input = await page.locator('#thinking-time');
-        const describedBy = await input.getAttribute('aria-describedby');
+    test('should have aria-describedby on thinking time control group', async ({ page }) => {
+        const group = page.locator('#thinking-choice');
+        const describedBy = await group.getAttribute('aria-describedby');
 
-        expect(describedBy).toBeDefined();
+        expect(describedBy).toBe('thinking-desc');
     });
 });
 
@@ -422,11 +419,10 @@ test.describe('Accessibility - Semantic HTML', () => {
         expect(tagName.toLowerCase()).toBe('button');
     });
 
-    test('should use select for dropdown', async ({ page }) => {
-        const difficultySelect = await page.locator('#difficulty-select');
-        const tagName = await difficultySelect.evaluate(el => el.tagName);
-
-        expect(tagName.toLowerCase()).toBe('select');
+    test('should use button group for difficulty', async ({ page }) => {
+        const group = page.locator('#difficulty-choice');
+        await expect(group).toBeVisible();
+        await expect(group.locator('button[data-level]')).toHaveCount(5);
     });
 
     test('should use list for move history', async ({ page }) => {
