@@ -126,8 +126,9 @@ test.describe('UI Integration - Controls + Game State', () => {
     test('should start new game when clicking New Game button', async ({ page }) => {
         await page.click('#new-game-btn');
 
-        // Verify board is set up
-        const pieces = await page.locator('.chess-piece').count();
+        // Verify board is set up - 32 pieces with text, 64 total .chess-piece divs
+        const piecesWithText = await page.locator('.chess-piece:has-text("♙♘♗♖♕♔♟♞♝♜♛♚")').count();
+        const pieces = await page.locator('.chess-piece.has-piece').count();
         expect(pieces).toBe(32);
     });
 

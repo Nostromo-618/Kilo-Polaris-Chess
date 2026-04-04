@@ -12,22 +12,26 @@
  */
 
 export class Controls {
-  /**
-   * @param {Object} options
-   * @param {HTMLElement} options.colorChoiceContainer
-   * @param {HTMLElement} options.difficultyChoiceContainer
-   * @param {HTMLElement} options.thinkingChoiceContainer
-   * @param {HTMLButtonElement} options.newGameButton
-   * @param {HTMLButtonElement} [options.undoButton]
-   * @param {() => void} options.onNewGameRequested
-   * @param {() => void} [options.onUndoRequested]
-   */
+/**
+    * @param {Object} options
+    * @param {HTMLElement} options.colorChoiceContainer
+    * @param {HTMLElement} options.difficultyChoiceContainer
+    * @param {HTMLElement} options.thinkingChoiceContainer
+    * @param {HTMLButtonElement} options.newGameButton
+    * @param {HTMLButtonElement} [options.undoButton]
+    * @param {HTMLSelectElement} [options.difficultySelect]
+    * @param {HTMLInputElement} [options.thinkingTimeInput]
+    * @param {() => void} options.onNewGameRequested
+    * @param {() => void} [options.onUndoRequested]
+    */
   constructor({
     colorChoiceContainer,
     difficultyChoiceContainer,
     thinkingChoiceContainer,
     newGameButton,
     undoButton,
+    difficultySelect,
+    thinkingTimeInput,
     onNewGameRequested,
     onUndoRequested,
   }) {
@@ -36,6 +40,8 @@ export class Controls {
     this.thinkingChoiceContainer = thinkingChoiceContainer;
     this.newGameButton = newGameButton;
     this.undoButton = undoButton || null;
+    this.difficultySelect = difficultySelect || null;
+    this.thinkingTimeInput = thinkingTimeInput || null;
     this.onNewGameRequested = onNewGameRequested || (() => { });
     this.onUndoRequested = onUndoRequested || (() => { });
 
@@ -55,8 +61,11 @@ export class Controls {
   init() {
     if (this.colorChoiceContainer) {
       this.colorChoiceContainer.addEventListener("click", this.handleColorClick);
-      const active = this.colorChoiceContainer.querySelector('button[data-color="white"]');
-      if (active) active.classList.add("vd-is-active");
+      const buttons = this.colorChoiceContainer.querySelectorAll("button");
+      buttons.forEach(btn => {
+        btn.setAttribute("aria-pressed", btn.classList.contains("vd-is-active") ? "true" : "false");
+        btn.setAttribute("aria-selected", btn.classList.contains("vd-is-active") ? "true" : "false");
+      });
     }
 
     if (this.difficultyChoiceContainer) {
@@ -69,10 +78,73 @@ export class Controls {
 
     if (this.newGameButton) {
       this.newGameButton.addEventListener("click", this.handleNewGameClick);
+      this.newGameButton.addEventListener("keydown", (e) => {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          this.handleNewGameClick();
+        }
+      });
     }
 
     if (this.undoButton) {
       this.undoButton.addEventListener("click", this.handleUndoClick);
+      this.undoButton.addEventListener("keydown", (e) => {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          this.handleUndoClick();
+        }
+      });
+    }
+
+    if (this.difficultySelect) {
+      this.difficultySelect.addEventListener("change", () => {
+        this.selectedDifficulty = Number(this.difficultySelect.value) || 3;
+        this.syncDifficultyButtons();
+      });
+    }
+
+    if (this.thinkingTimeInput) {
+      this.thinkingTimeInput.setAttribute("aria-describedby", "thinking-desc");
+      this.thinkingTimeInput.addEventListener("change", () => {
+        this.selectedThinkingTime = Number(this.thinkingTimeInput.value) || 10;
+        this.syncThinkingButtons();
+      });
+    }
+  }
+
+  syncDifficultyButtons() {
+    if (this.difficultyChoiceContainer) {
+      const buttons = this.difficultyChoiceContainer.querySelectorAll("button");
+      buttons.forEach((btn) => {
+        const level = Number(btn.getAttribute("data-level"));
+        if (level === this.selectedDifficulty) {
+          btn.classList.add("vd-is-active");
+          btn.setAttribute("aria-selected", "true");
+        } else {
+          btn.classList.remove("vd-is-active");
+          btn.setAttribute("aria-selected", "false");
+        }
+      });
+    }
+    if (this.difficultySelect) {
+      this.difficultySelect.value = String(this.selectedDifficulty);
+    }
+  }
+
+  syncThinkingButtons() {
+    if (this.thinkingChoiceContainer) {
+      const buttons = this.thinkingChoiceContainer.querySelectorAll("button");
+      buttons.forEach((btn) => {
+        const time = Number(btn.getAttribute("data-time"));
+        if (time === this.selectedThinkingTime) {
+          btn.classList.add("vd-is-active");
+        } else {
+          btn.classList.remove("vd-is-active");
+        }
+      });
+    }
+    if (this.thinkingTimeInput) {
+      this.thinkingTimeInput.value = String(this.selectedThinkingTime);
     }
   }
 
@@ -86,8 +158,14 @@ export class Controls {
     this.selectedColor = color;
 
     const buttons = this.colorChoiceContainer.querySelectorAll("button");
-    buttons.forEach((btn) => btn.classList.remove("vd-is-active"));
+    buttons.forEach((btn) => {
+      btn.classList.remove("vd-is-active");
+      btn.setAttribute("aria-pressed", "false");
+      btn.setAttribute("aria-selected", "false");
+    });
     target.classList.add("vd-is-active");
+    target.setAttribute("aria-pressed", "true");
+    target.setAttribute("aria-selected", "true");
   }
 
   handleDifficultyClick(event) {

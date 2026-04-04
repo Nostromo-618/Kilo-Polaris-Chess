@@ -36,7 +36,7 @@
           <button id="theme-toggle-btn" class="vd-theme-customizer-trigger" aria-label="Toggle theme">
             <i class="ph-duotone ph-desktop"></i>
           </button>
-          <button class="vd-theme-customizer-trigger" data-theme-customizer-trigger aria-label="Open theme customizer">
+          <button class="vd-theme-customizer-trigger" data-theme-customizer-trigger aria-label="Open theme customizer" aria-expanded="false">
             <i class="ph-duotone ph-paint-roller"></i>
           </button>
         </div>
@@ -64,25 +64,35 @@
               </div>
 
               <div class="vd-form-group">
-                <label class="vd-form-label">Computer strength:</label>
-                <div class="vd-btn-group" id="difficulty-choice">
+                <label class="vd-form-label" for="difficulty-select">Computer strength:</label>
+                <select id="difficulty-select" class="vd-form-select" aria-describedby="difficulty-desc">
+                  <option value="1">Very Easy</option>
+                  <option value="2">Easy</option>
+                  <option value="3" selected>Medium</option>
+                  <option value="4">Hard</option>
+                  <option value="5">Very Hard</option>
+                </select>
+                <div class="vd-btn-group" id="difficulty-choice" role="group" aria-label="Or select with buttons">
                   <button data-level="1" class="vd-btn vd-btn-outline vd-btn-sm" title="Very Easy">1</button>
                   <button data-level="2" class="vd-btn vd-btn-outline vd-btn-sm" title="Easy">2</button>
                   <button data-level="3" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active" title="Medium">3</button>
                   <button data-level="4" class="vd-btn vd-btn-outline vd-btn-sm" title="Hard">4</button>
                   <button data-level="5" class="vd-btn vd-btn-outline vd-btn-sm" title="Very Hard">5</button>
                 </div>
+                <span id="difficulty-desc" class="vd-sr-only">Select AI difficulty level from 1 (easiest) to 5 (hardest)</span>
               </div>
 
               <div class="vd-form-group">
-                <label class="vd-form-label">Maximum Thinking Time:</label>
-                <div class="vd-btn-group" id="thinking-choice">
+                <label class="vd-form-label" for="thinking-time">Maximum Thinking Time:</label>
+                <input type="number" id="thinking-time" class="vd-form-input" min="1" max="60" value="10" aria-describedby="thinking-desc" />
+                <div class="vd-btn-group" id="thinking-choice" role="group" aria-label="Or select preset times">
                   <button data-time="5" class="vd-btn vd-btn-outline vd-btn-sm">5s</button>
                   <button data-time="10" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">10s</button>
                   <button data-time="15" class="vd-btn vd-btn-outline vd-btn-sm">15s</button>
                   <button data-time="30" class="vd-btn vd-btn-outline vd-btn-sm">30s</button>
                   <button data-time="60" class="vd-btn vd-btn-outline vd-btn-sm">60s</button>
                 </div>
+                <span id="thinking-desc" class="vd-sr-only">Maximum thinking time in seconds (1-60)</span>
               </div>
 
               <div class="vd-form-group board-size-control-desktop">
@@ -93,7 +103,7 @@
               </div>
 
               <div class="vd-form-group vd-mt-5">
-                <button id="new-game-btn" class="vd-btn vd-btn-primary vd-btn-block vd-shadow-lg">
+                <button id="new-game-btn" class="vd-btn vd-btn-primary vd-btn-block vd-shadow-lg" aria-label="Start new game">
                   <i class="ph-duotone ph-play vd-mr-2"></i> New Game
                 </button>
               </div>
@@ -107,7 +117,7 @@
 
             <section class="vd-card-body status-section">
               <h2 class="vd-text-gradient">Status</h2>
-              <div id="status-text" class="status-text">
+              <div id="status-text" class="status-text" role="status" aria-live="polite">
                 Initialize a new game to start.
               </div>
               <div id="turn-indicator" class="status-sub"></div>

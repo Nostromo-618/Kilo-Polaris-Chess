@@ -61,6 +61,8 @@ const dom = {
   thinkingChoice: document.getElementById("thinking-choice"),
   newGameBtn: document.getElementById("new-game-btn"),
   undoBtn: document.getElementById("undo-btn"),
+  difficultySelect: document.getElementById("difficulty-select"),
+  thinkingTimeInput: document.getElementById("thinking-time"),
   statusText: document.getElementById("status-text"),
   turnIndicator: document.getElementById("turn-indicator"),
   lastMoveIndicator: document.getElementById("last-move-indicator"),
@@ -83,6 +85,8 @@ const controlsView = new Controls({
   thinkingChoiceContainer: dom.thinkingChoice,
   newGameButton: dom.newGameBtn,
   undoButton: dom.undoBtn,
+  difficultySelect: dom.difficultySelect,
+  thinkingTimeInput: dom.thinkingTimeInput,
   onNewGameRequested: handleNewGameRequested,
   onUndoRequested: handleUndoRequested,
 });

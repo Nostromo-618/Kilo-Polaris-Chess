@@ -85,10 +85,12 @@ export class BoardView {
         squareEl.classList.add(isLight ? "light" : "dark");
 
         squareEl.dataset.square = square;
+        squareEl.setAttribute("aria-label", `Square ${square}`);
         squareEl.addEventListener("click", this.handleSquareClick);
 
         const pieceEl = document.createElement("div");
         pieceEl.classList.add("chess-piece");
+        pieceEl.setAttribute("role", "img");
         squareEl.appendChild(pieceEl);
 
         boardGrid.appendChild(squareEl);
@@ -167,9 +169,27 @@ export class BoardView {
 
     // Update piece content and highlighting
     this.squareEls.forEach((squareEl, square) => {
-      const pieceEl = squareEl.querySelector(".chess-piece");
       const code = boardState[square] || null;
-      pieceEl.textContent = code ? (PIECE_TO_GLYPH[code] || "?") : "";
+      const pieceDescriptions = { wP: "White pawn", wN: "White knight", wB: "White bishop", wR: "White rook", wQ: "White queen", wK: "White king", bP: "Black pawn", bN: "Black knight", bB: "Black bishop", bR: "Black rook", bQ: "Black queen", bK: "Black king" };
+
+      // Find or create piece element
+      let pieceEl = squareEl.querySelector(".chess-piece");
+      if (!pieceEl) {
+        pieceEl = document.createElement("div");
+        pieceEl.classList.add("chess-piece");
+        pieceEl.setAttribute("role", "img");
+        squareEl.appendChild(pieceEl);
+      }
+
+      if (code) {
+        pieceEl.textContent = PIECE_TO_GLYPH[code] || "?";
+        pieceEl.setAttribute("aria-label", pieceDescriptions[code]);
+        pieceEl.classList.add("has-piece");
+      } else {
+        pieceEl.textContent = "";
+        pieceEl.setAttribute("aria-label", "Empty square");
+        pieceEl.classList.remove("has-piece");
+      }
 
       squareEl.classList.remove(
         "highlight-selected",

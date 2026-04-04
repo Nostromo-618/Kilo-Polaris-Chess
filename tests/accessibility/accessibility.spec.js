@@ -80,10 +80,10 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
         // Press Space
         await page.keyboard.press(' ');
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(500);
 
         // Verify game started
-        const pieces = await page.locator('.chess-piece').count();
+        const pieces = await page.locator('.chess-piece.has-piece').count();
         expect(pieces).toBe(32);
     });
 
@@ -93,10 +93,10 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
         // Press Enter
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(500);
 
         // Verify game started
-        const pieces = await page.locator('.chess-piece').count();
+        const pieces = await page.locator('.chess-piece.has-piece').count();
         expect(pieces).toBe(32);
     });
 
@@ -310,8 +310,8 @@ test.describe('Accessibility - Color Contrast', () => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
 
-        // Verify pieces are visible
-        const pieces = await page.locator('.chess-piece').count();
+        // Verify pieces are visible - 32 actual pieces on 64 squares
+        const pieces = await page.locator('.chess-piece.has-piece').count();
         expect(pieces).toBe(32);
     });
 });

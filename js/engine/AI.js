@@ -84,8 +84,9 @@ for (let i = 0; i < 8; i++) {
  * Compute the Zobrist hash for a position.
  * @param {Object} state - board, activeColor, castlingRights, enPassantTarget
  * @returns {BigInt} 64-bit hash
+ * @internal - exposed for testing
  */
-function computeZobristHash(state) {
+export function _computeZobristHash(state) {
   let hash = 0n;
   const { board, activeColor, castlingRights, enPassantTarget } = state;
 
@@ -153,8 +154,9 @@ function indexToAlgebraicFast(index) {
 /**
  * Internal representation wrapper for search.
  * Supports incremental makeMove/undoMove for maximum performance.
+ * @internal - exposed for testing
  */
-class SearchState {
+export class SearchState {
   constructor(baseState) {
     if (!baseState || !baseState.board) {
       throw new Error('SearchState: baseState.board is undefined');
@@ -567,6 +569,12 @@ const NULL_MOVE_REDUCTION = 3;
 const ENDGAME_PIECE_THRESHOLD = 7;
 
 export class AI {
+  /**
+   * @internal - exposed for testing
+   */
+  static SearchState = SearchState;
+  static NULL_MOVE_REDUCTION = 3;
+
   constructor() {
     this.randomness = {
       1: 0.35,
@@ -598,6 +606,15 @@ export class AI {
 
     // Transposition table - fixed size array for speed
     this.transpositionTable = new Array(TT_MAX_SIZE);
+  }
+
+  /**
+   * Compute Zobrist hash for a position.
+   * @param {Object} state
+   * @returns {BigInt}
+   */
+  computeZobristHash(state) {
+    return _computeZobristHash(state);
   }
 
   clearSearchData() {
