@@ -46,7 +46,7 @@ export class DisclaimerModal {
               <i class="ph-duotone ph-chess-piece"></i>
             </span>
             <h3 id="disclaimer-modal-title" class="vd-modal-title disclaimer-modal-title">
-              Welcome to Kilo Polaris Chess
+              Welcome to Kilo Aurora Chess
             </h3>
           </div>
           <div class="vd-modal-body disclaimer-modal-body">

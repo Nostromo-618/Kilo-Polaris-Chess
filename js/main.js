@@ -19,6 +19,14 @@ import {
 } from "./storage.js";
 
 /**
+ * The Vanduo bundle registers components but does not start them; `init()` runs
+ * `initComponents()` (theme customizer, modals, etc.) and is required for UI behavior.
+ */
+if (typeof window.Vanduo !== "undefined" && typeof window.Vanduo.init === "function") {
+  window.Vanduo.init();
+}
+
+/**
  * Main entry point for client-side chess application
  *
  * Persistence (localStorage):
@@ -61,7 +69,6 @@ const dom = {
   difficultyChoice: document.getElementById("difficulty-choice"),
   thinkingChoice: document.getElementById("thinking-choice"),
   newGameBtn: document.getElementById("new-game-btn"),
-  undoBtn: document.getElementById("undo-btn"),
   statusText: document.getElementById("status-text"),
   turnIndicator: document.getElementById("turn-indicator"),
   lastMoveIndicator: document.getElementById("last-move-indicator"),
@@ -70,6 +77,8 @@ const dom = {
   disclaimerModalContainer: document.getElementById("disclaimer-modal-container"),
   boardSizeRange: document.getElementById("board-size-range"),
   boardSizeValue: document.getElementById("board-size-value"),
+  header: document.querySelector(".app-header"),
+  thinkingIcon: document.querySelector(".thinking-icon"),
 };
 
 // Initialize board view
@@ -83,9 +92,7 @@ const controlsView = new Controls({
   difficultyChoiceContainer: dom.difficultyChoice,
   thinkingChoiceContainer: dom.thinkingChoice,
   newGameButton: dom.newGameBtn,
-  undoButton: dom.undoBtn,
   onNewGameRequested: handleNewGameRequested,
-  onUndoRequested: handleUndoRequested,
 });
 
 // Initialize game end modal
@@ -107,7 +114,6 @@ async function initializeGame() {
 
   gameEndModal.hide();
   previousGameOver = false;
-  controlsView.setUndoEnabled(false);
 
   const playerColor = controlsView.getSelectedColor();
   const difficulty = controlsView.getDifficulty();
@@ -152,13 +158,12 @@ async function initializeGame() {
 async function restoreGame(savedState) {
   previousGameOver = false;
   gameEndModal.hide();
-  controlsView.setUndoEnabled(false);
 
   const savedDifficulty = getDifficulty();
 
   try {
     game = Game.fromSaved(savedState, {
-      difficulty: savedDifficulty || 3,
+      difficulty: savedDifficulty || 5,
       onUpdate: syncUIWithGame,
     });
 
@@ -194,28 +199,6 @@ async function handleNewGameRequested() {
   await initializeGame();
 }
 
-function handleUndoRequested() {
-  if (isProcessingMove) return;
-  if (!game || game.isGameOver()) return;
-  if (!game.canUndo()) return;
-
-  const success = game.undo();
-  if (success) {
-    const snapshot = game.getSnapshot();
-
-    boardView.render(game.getBoard(), {
-      perspective: game.getPlayerColor(),
-      selected: null,
-      legalMoves: [],
-      lastMove: snapshot.lastMove,
-      checkedKingSquare: game.getCheckedKingSquare(),
-    });
-
-    syncUIWithGame(snapshot);
-    updateUndoButtonState();
-  }
-}
-
 async function handleSquareSelected(square) {
   if (isProcessingMove) return;
   if (!game) return;
@@ -244,8 +227,6 @@ async function handleSquareSelected(square) {
     lastMove: snapshot.lastMove,
     checkedKingSquare: game.getCheckedKingSquare(),
   });
-
-  updateUndoButtonState();
 
   if (!game.isGameOver()) {
     requestAnimationFrame(() => {
@@ -283,22 +264,12 @@ async function triggerAIMove() {
       lastMove: snapshot.lastMove,
       checkedKingSquare: game.getCheckedKingSquare(),
     });
-
-    updateUndoButtonState();
   } catch (error) {
     console.error("AI move error:", error);
     dom.statusText.textContent = "An error occurred while computing AI move.";
   } finally {
     isProcessingMove = false;
     syncBusyState(false);
-  }
-}
-
-function updateUndoButtonState() {
-  if (game && !game.isGameOver() && game.canUndo() && !isProcessingMove) {
-    controlsView.setUndoEnabled(true);
-  } else {
-    controlsView.setUndoEnabled(false);
   }
 }
 
@@ -348,9 +319,13 @@ function syncUIWithGame(snapshot) {
 
 function syncBusyState(isBusy) {
   if (isBusy) {
+    dom.thinkingIcon.classList.add("thinking-icon--active");
+    dom.thinkingIcon.classList.add('blinking');
     dom.statusText.classList.add("busy");
     dom.statusText.textContent = "Computer is thinking...";
   } else {
+    dom.thinkingIcon.classList.remove("thinking-icon--active");
+    dom.thinkingIcon.classList.remove('blinking');
     dom.statusText.classList.remove("busy");
     if (game) {
       syncUIWithGame(game.getSnapshot());

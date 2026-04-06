@@ -1,7 +1,7 @@
 /**
  * storage.js
  *
- * Centralised localStorage manager for Kilo Polaris Chess.
+ * Centralised localStorage manager for Kilo Aurora Chess.
  * All keys are namespaced under "kpc-" to avoid collisions.
  *
  * Keys:
@@ -108,7 +108,7 @@ export function getDifficulty() {
  * @param {number} level 1-5
  */
 export function setDifficulty(level) {
-  const clamped = Math.max(1, Math.min(5, Number(level) || 3));
+  const clamped = Math.max(1, Math.min(5, Number(level) || 5));
   write(KEYS.DIFFICULTY, String(clamped));
 }
 
@@ -164,7 +164,7 @@ export function getThinkingTime() {
  * @param {number} seconds 1-60
  */
 export function setThinkingTime(seconds) {
-  const clamped = Math.max(1, Math.min(60, Number(seconds) || 10));
+  const clamped = Math.max(1, Math.min(60, Number(seconds) || 30));
   write(KEYS.THINKING_TIME, String(clamped));
 }
 

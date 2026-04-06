@@ -1,5 +1,5 @@
 /**
- * Theme variables and overrides for Kilo Polaris Chess
+ * Theme variables and overrides for Kilo Aurora Chess
  * Mapped to Vanduo Framework's CSS variable system
  */
 
@@ -94,14 +94,27 @@
   margin-bottom: var(--spacing-21);
 }
 
+/* Keep navbar row vertically centered; Vanduo utilities may not win specificity */
+.app-header .vd-container-lg {
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.app-header .vd-container-lg > .app-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .app-title {
   font-size: var(--font-size-xl);
   font-weight: 800;
   margin: 0;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--spacing-8, 8px);
+  line-height: 1.15;
+  min-width: 0;
   letter-spacing: -0.02em;
   color: var(--color-primary);
 }
@@ -112,6 +125,35 @@
 
 .app-title-text {
   color: inherit;
+  min-width: 0;
+  /* Do not grow — keeps the brain icon directly after the title, not at the navbar edge */
+  flex: 0 1 auto;
+}
+
+/*
+ * Reserve a fixed slot so the header height does not change when the AI is thinking.
+ * Visibility (not display) keeps layout space; .thinking-icon--active is toggled in main.js
+ */
+.app-title .thinking-icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-primary);
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-title .thinking-icon.thinking-icon--active {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .app-version {
@@ -135,12 +177,26 @@
   overflow: hidden;
 }
 
+.side-panel-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-8, 8px);
+  padding: var(--spacing-13, 13px) var(--card-padding, 1rem) var(--spacing-8, 8px);
+}
+
+.side-panel-version-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8, 8px);
+}
+
 .side-panel-attribution {
   margin: 0;
-  padding: var(--spacing-13, 13px) var(--card-padding, 1rem) var(--spacing-8, 8px);
   font-size: var(--font-size-sm);
   color: var(--text-muted);
-  text-align: center;
+  text-align: right;
 }
 
 .side-panel-attribution a {

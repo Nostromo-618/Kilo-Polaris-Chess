@@ -33,8 +33,8 @@ test.describe('Game Initialization', () => {
         await expect(newGameBtn).toHaveText('New Game');
     });
 
-    test('should display default difficulty as Level 3', async ({ page }) => {
-        await expect(page.locator('#difficulty-choice button[data-level="3"]')).toHaveClass(/vd-is-active/);
+    test('should display default difficulty as Level 5', async ({ page }) => {
+        await expect(page.locator('#difficulty-choice button[data-level="5"]')).toHaveClass(/vd-is-active/);
     });
 
     test('should start new game when clicking New Game', async ({ page }) => {
@@ -73,8 +73,8 @@ test.describe('Game Initialization', () => {
         await expect(blackBtn).toBeVisible();
         await expect(randomBtn).toBeVisible();
 
-        // White should be active by default (vd-is-active in Vanduo v1.1+)
-        await expect(whiteBtn).toHaveClass(/vd-is-active/);
+        // Random should be active by default (vd-is-active in Vanduo v1.1+)
+        await expect(randomBtn).toHaveClass(/vd-is-active/);
     });
 
     test('should switch color choice when clicking Black', async ({ page }) => {

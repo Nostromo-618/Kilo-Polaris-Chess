@@ -349,12 +349,6 @@ test.describe('Accessibility - ARIA Attributes', () => {
         expect(expanded).toBeDefined();
     });
 
-    test('should have aria-describedby on thinking time control group', async ({ page }) => {
-        const group = page.locator('#thinking-choice');
-        const describedBy = await group.getAttribute('aria-describedby');
-
-        expect(describedBy).toBe('thinking-desc');
-    });
 });
 
 test.describe('Accessibility - Color Blindness', () => {

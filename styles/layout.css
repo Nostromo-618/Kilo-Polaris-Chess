@@ -1,5 +1,5 @@
 /**
- * Layout and component styles for Kilo Polaris Chess
+ * Layout and component styles for Kilo Aurora Chess
  * Chess-specific styles, board layout, modals
  */
 
@@ -104,6 +104,7 @@
   user-select: none;
   cursor: pointer;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  font-family: "Segoe UI", "Apple Color Emoji", "Noto Color Emoji", "Symbola", "Arial Unicode MS", monospace;
 }
 
 /* Mobile piece sizing: see @media blocks below (991px / 575px) */
@@ -479,12 +480,6 @@
     gap: 10px;
   }
 
-  .app-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
   .side-panel {
     padding: 10px;
   }
@@ -537,5 +532,90 @@
   .game-end-actions .btn {
     width: 100%;
     min-width: auto;
+  }
+}
+
+/* Blinking animation for thinking icon */
+@keyframes thinking-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.blinking {
+  animation: thinking-blink 1s ease infinite;
+}
+
+/* Gradient pulse animation for header when computer is thinking */
+@keyframes header-gradient-pulse {
+  0% {
+    background-position: 0% 50%;
+   }
+  50% {
+    background-position: 100% 50%;
+   }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.header-busy {
+  background-image: linear-gradient(
+    45deg,
+    var(--secondary-8),
+    var(--secondary-7),
+    var(--secondary-8),
+    var(--secondary-7)
+  ) !important;
+  background-size: 200% 200% !important;
+  animation: header-gradient-pulse 3s ease infinite !important;
+  background-color: transparent !important;
+}
+
+/* Header right section - desktop: align to right, mobile: full width */
+.header-right-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Mobile styles */
+@media (max-width: 575px) {
+  .app-header {
+    padding-block: 12px;
+    padding-inline: 0;
+  }
+
+  .app-header .vd-container-lg {
+    min-height: 2.5rem;
+  }
+
+  .header-right-section {
+    width: auto;
+    margin-top: 0;
+  }
+
+  .app-title-icon {
+    font-size: 1.5rem;
+  }
+
+  .app-title-text {
+    font-size: 1.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Match reserved slot; keeps one-row header without growing when brain shows */
+  .app-title .thinking-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 1.35rem;
+  }
+
+  .app-version {
+    font-size: 0.75rem;
   }
 }

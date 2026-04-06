@@ -74,7 +74,6 @@ export class GameState {
     state.result = null;
     state.lastMove = null;
     state.repetitionMap = new Map();
-    state.undoStack = [];
     state.recordRepetitionKey();
     state.updateStatusText();
     return state;
@@ -107,7 +106,6 @@ export class GameState {
 
       this.selectedSquare = null;
       this.cachedLegalTargets = [];
-      this.undoStack = [];
     } else {
       this.board = new Array(64).fill(null);
       this.activeColor = "white";
@@ -125,7 +123,6 @@ export class GameState {
       this.repetitionMap = new Map();
       this.selectedSquare = null;
       this.cachedLegalTargets = [];
-      this.undoStack = [];
     }
   }
 
@@ -280,20 +277,6 @@ export class GameState {
   applyMove(move) {
     if (this.isGameOver()) return;
 
-    // Save state for undo before applying
-    this.undoStack.push({
-      board: cloneBoard(this.board),
-      activeColor: this.activeColor,
-      castlingRights: JSON.parse(JSON.stringify(this.castlingRights)),
-      enPassantTarget: this.enPassantTarget,
-      halfmoveClock: this.halfmoveClock,
-      fullmoveNumber: this.fullmoveNumber,
-      result: this.result ? { ...this.result } : null,
-      lastMove: this.lastMove ? { ...this.lastMove } : null,
-      lastMoveText: this.lastMoveText || null,
-      repetitionMap: new Map(this.repetitionMap),
-    });
-
     const fromIndex = algebraicToIndex(move.from);
     const toIndex = algebraicToIndex(move.to);
     const movingPiece = this.board[fromIndex];
@@ -382,51 +365,6 @@ export class GameState {
     // Determine game result
     this.updateResult();
     this.updateStatusText();
-  }
-
-  /**
-   * Whether an undo is possible (at least one move has been made).
-   * @returns {boolean}
-   */
-  canUndo() {
-    return this.undoStack && this.undoStack.length >= 2;
-  }
-
-  /**
-   * Undo the last two moves (player + computer).
-   * Returns true if undo was successful.
-   * @returns {boolean}
-   */
-  undoLastMove() {
-    if (!this.canUndo()) return false;
-
-    // Pop two states: one for the computer's move, one for the player's move
-    this.undoStack.pop(); // current state
-    const prevState = this.undoStack.pop();
-
-    if (!prevState) return false;
-
-    this.board = prevState.board;
-    this.activeColor = prevState.activeColor;
-    this.castlingRights = prevState.castlingRights;
-    this.enPassantTarget = prevState.enPassantTarget;
-    this.halfmoveClock = prevState.halfmoveClock;
-    this.fullmoveNumber = prevState.fullmoveNumber;
-    this.result = prevState.result;
-    this.lastMove = prevState.lastMove;
-    this.lastMoveText = prevState.lastMoveText;
-    this.repetitionMap = prevState.repetitionMap;
-
-    // Remove last two history entries
-    if (this.moveHistory.length >= 2) {
-      this.moveHistory.pop();
-      this.moveHistory.pop();
-    }
-
-    this.selectedSquare = null;
-    this.cachedLegalTargets = [];
-    this.updateStatusText();
-    return true;
   }
 
   /**

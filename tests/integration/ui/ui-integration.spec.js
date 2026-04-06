@@ -141,11 +141,11 @@ test.describe('UI Integration - Controls + Game State', () => {
     });
 
     test('should update thinking time when selecting preset', async ({ page }) => {
-        await page.locator('#thinking-choice button[data-time="15"]').click();
+        await page.locator('#thinking-choice button[data-time="60"]').click();
         const active = await page.evaluate(() =>
             document.querySelector('#thinking-choice button.vd-is-active')?.getAttribute('data-time')
         );
-        expect(active).toBe('15');
+        expect(active).toBe('60');
     });
 
     test('should change color choice when clicking button', async ({ page }) => {
@@ -402,7 +402,8 @@ test.describe('UI Integration - Board Flipping', () => {
         await page.reload();
     });
 
-    test('should show white perspective by default', async ({ page }) => {
+    test('should show white perspective when playing as white', async ({ page }) => {
+        await page.click('#color-choice button[data-color="white"]');
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
 

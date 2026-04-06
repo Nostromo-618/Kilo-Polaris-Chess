@@ -89,7 +89,7 @@ export class Game {
 
     this.state = GameState.createStarting(resolvedPlayerColor);
 
-    this.setDifficulty(difficulty || 3);
+    this.setDifficulty(difficulty || 5);
     this.notify();
   }
 
@@ -104,7 +104,7 @@ export class Game {
     instance.ai = new AI();
     instance.onUpdate = onUpdate || (() => { });
     instance.state = new GameState(serialized);
-    instance.setDifficulty(difficulty || serialized.difficulty || 3);
+    instance.setDifficulty(difficulty || serialized.difficulty || 5);
     // Re-compute status text so UI shows correct message
     instance.state.updateStatusText();
     instance.notify();
@@ -116,7 +116,7 @@ export class Game {
    * @param {number} level 1..5
    */
   setDifficulty(level) {
-    const clamped = Math.max(1, Math.min(5, Number(level) || 3));
+    const clamped = Math.max(1, Math.min(5, Number(level) || 5));
     this.difficulty = clamped;
   }
 
@@ -158,26 +158,6 @@ export class Game {
    */
   isGameOver() {
     return this.state.isGameOver();
-  }
-
-  /**
-   * Whether undo is possible.
-   * @returns {boolean}
-   */
-  canUndo() {
-    return this.state.canUndo();
-  }
-
-  /**
-   * Undo the last two moves (player + computer).
-   * @returns {boolean} true if undo was successful
-   */
-  undo() {
-    const success = this.state.undoLastMove();
-    if (success) {
-      this.notify();
-    }
-    return success;
   }
 
   /**

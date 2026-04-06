@@ -86,15 +86,16 @@ test.describe('UI Controls', () => {
         test('should highlight active color choice', async ({ page }) => {
             const whiteBtn = page.locator('#color-choice button[data-color="white"]');
             const blackBtn = page.locator('#color-choice button[data-color="black"]');
+            const randomBtn = page.locator('#color-choice button[data-color="random"]');
 
-            // Default is white
-            await expect(whiteBtn).toHaveClass(/active/);
-            await expect(blackBtn).not.toHaveClass(/active/);
+            // Default is random
+            await expect(randomBtn).toHaveClass(/active/);
+            await expect(whiteBtn).not.toHaveClass(/active/);
 
             // Switch to black
             await blackBtn.click();
             await expect(blackBtn).toHaveClass(/active/);
-            await expect(whiteBtn).not.toHaveClass(/active/);
+            await expect(randomBtn).not.toHaveClass(/active/);
         });
 
         test('should start game with selected color', async ({ page }) => {
@@ -123,8 +124,8 @@ test.describe('UI Controls', () => {
             await expect(group.locator('button[data-time]')).toHaveCount(5);
         });
 
-        test('should default to 10 seconds', async ({ page }) => {
-            await expect(page.locator('#thinking-choice button[data-time="10"]')).toHaveClass(/vd-is-active/);
+        test('should default to 30 seconds', async ({ page }) => {
+            await expect(page.locator('#thinking-choice button[data-time="30"]')).toHaveClass(/vd-is-active/);
         });
 
         test('should allow changing thinking time', async ({ page }) => {

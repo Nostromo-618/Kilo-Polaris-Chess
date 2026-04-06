@@ -4,11 +4,10 @@
  * Handles:
  * - Color selection (white / black / random)
  * - Difficulty selection (1-5)
- * - Thinking time (5s / 10s / 15s / 30s / 60s)
+ * - Thinking time (5s / 10s / 20s / 30s / 60s)
  * - New game button
- * - Undo button
  *
- * Provides getters for current settings and notifies when a new game or undo is requested.
+ * Provides getters for current settings and notifies when a new game is requested.
  */
 
 export class Controls {
@@ -18,39 +17,32 @@ export class Controls {
     * @param {HTMLElement} options.difficultyChoiceContainer
     * @param {HTMLElement} options.thinkingChoiceContainer
     * @param {HTMLButtonElement} options.newGameButton
-    * @param {HTMLButtonElement} [options.undoButton]
     * @param {HTMLSelectElement} [options.difficultySelect]
     * @param {() => void} options.onNewGameRequested
-    * @param {() => void} [options.onUndoRequested]
     */
   constructor({
     colorChoiceContainer,
     difficultyChoiceContainer,
     thinkingChoiceContainer,
     newGameButton,
-    undoButton,
     difficultySelect,
     onNewGameRequested,
-    onUndoRequested,
   }) {
     this.colorChoiceContainer = colorChoiceContainer;
     this.difficultyChoiceContainer = difficultyChoiceContainer;
     this.thinkingChoiceContainer = thinkingChoiceContainer;
     this.newGameButton = newGameButton;
-    this.undoButton = undoButton || null;
     this.difficultySelect = difficultySelect || null;
     this.onNewGameRequested = onNewGameRequested || (() => { });
-    this.onUndoRequested = onUndoRequested || (() => { });
 
-    this.selectedColor = "white";
-    this.selectedDifficulty = 3;
-    this.selectedThinkingTime = 10;
+    this.selectedColor = "random";
+    this.selectedDifficulty = 5;
+    this.selectedThinkingTime = 30;
 
     this.handleColorClick = this.handleColorClick.bind(this);
     this.handleDifficultyClick = this.handleDifficultyClick.bind(this);
     this.handleThinkingClick = this.handleThinkingClick.bind(this);
     this.handleNewGameClick = this.handleNewGameClick.bind(this);
-    this.handleUndoClick = this.handleUndoClick.bind(this);
 
     this.init();
   }
@@ -83,19 +75,9 @@ export class Controls {
       });
     }
 
-    if (this.undoButton) {
-      this.undoButton.addEventListener("click", this.handleUndoClick);
-      this.undoButton.addEventListener("keydown", (e) => {
-        if (e.key === " " || e.key === "Enter") {
-          e.preventDefault();
-          this.handleUndoClick();
-        }
-      });
-    }
-
     if (this.difficultySelect) {
       this.difficultySelect.addEventListener("change", () => {
-        this.selectedDifficulty = Number(this.difficultySelect.value) || 3;
+        this.selectedDifficulty = Number(this.difficultySelect.value) || 5;
         this.syncDifficultyButtons();
       });
     }
@@ -187,22 +169,18 @@ export class Controls {
     this.onNewGameRequested();
   }
 
-  handleUndoClick() {
-    this.onUndoRequested();
-  }
-
   getSelectedColor() {
     return this.selectedColor || "random";
   }
 
   getDifficulty() {
     const val = this.selectedDifficulty;
-    if (Number.isNaN(val) || val < 1 || val > 5) return 3;
+    if (Number.isNaN(val) || val < 1 || val > 5) return 5;
     return val;
   }
 
   setDifficulty(level) {
-    const clamped = Math.max(1, Math.min(5, Number(level) || 3));
+    const clamped = Math.max(1, Math.min(5, Number(level) || 5));
     this.selectedDifficulty = clamped;
     if (this.difficultyChoiceContainer) {
       const buttons = this.difficultyChoiceContainer.querySelectorAll("button");
@@ -257,21 +235,11 @@ export class Controls {
         }
       });
       if (!matched) {
-        this.selectedThinkingTime = 10;
+        this.selectedThinkingTime = 30;
         buttons.forEach((btn) => {
-          btn.classList.toggle("vd-is-active", Number(btn.getAttribute("data-time")) === 10);
+          btn.classList.toggle("vd-is-active", Number(btn.getAttribute("data-time")) === 30);
         });
       }
-    }
-  }
-
-  /**
-   * Set undo button enabled/disabled state.
-   * @param {boolean} enabled
-   */
-  setUndoEnabled(enabled) {
-    if (this.undoButton) {
-      this.undoButton.disabled = !enabled;
     }
   }
 }

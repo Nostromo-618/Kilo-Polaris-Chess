@@ -44,7 +44,7 @@ test.describe('Disclaimer Modal', () => {
     test('displays title and accept button', async ({ page }) => {
         await freshPage(page);
 
-        await expect(page.locator('#disclaimer-modal-title')).toContainText('Kilo Polaris Chess');
+        await expect(page.locator('#disclaimer-modal-title')).toContainText('Kilo Aurora Chess');
         await expect(page.locator('#disclaimer-accept-btn')).toBeVisible();
     });
 
