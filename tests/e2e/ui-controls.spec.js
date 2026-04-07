@@ -103,7 +103,7 @@ test.describe('UI Controls', () => {
 
             // Start game
             await page.click('#new-game-btn');
-            await page.waitForSelector('.chess-piece:has-text("♙")');
+            await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
             // When playing as black, board should be flipped
             // a8 square should be at the bottom-left visually

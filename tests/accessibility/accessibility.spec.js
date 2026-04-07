@@ -18,7 +18,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
     test('should navigate board with arrow keys', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Focus on a square
         await page.click('.chess-square[data-square="e2"]');
@@ -34,7 +34,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
     test('should select piece with Enter key', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Focus on e2
         await page.click('.chess-square[data-square="e2"]');
@@ -49,14 +49,14 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
     test('should move piece with Enter key', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Board interaction is click-driven; Enter on a focused square is not wired for moves yet.
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
 
-        const e4Piece = await page.locator('.chess-square[data-square="e4"] .chess-piece').textContent();
-        expect(e4Piece).toBe('♙');
+        const e4Piece = await page.locator('.chess-square[data-square="e4"] .chess-piece').getAttribute('data-piece');
+        expect(e4Piece).toBe('wP');
     });
 
     test('should navigate controls with Tab key', async ({ page }) => {
@@ -128,7 +128,7 @@ test.describe('Accessibility - Screen Reader Support', () => {
 
     test('should have aria labels on board squares', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const e2Square = await page.locator('.chess-square[data-square="e2"]');
         const ariaLabel = await e2Square.getAttribute('aria-label');
@@ -139,7 +139,7 @@ test.describe('Accessibility - Screen Reader Support', () => {
 
     test('should have aria labels on pieces', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const piece = await page.locator('.chess-piece').first();
         const ariaLabel = await piece.getAttribute('aria-label');
@@ -149,7 +149,7 @@ test.describe('Accessibility - Screen Reader Support', () => {
 
     test('should announce moves to screen readers', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Check for status region
         const statusRegion = await page.locator('#status-text');
@@ -161,7 +161,7 @@ test.describe('Accessibility - Screen Reader Support', () => {
 
     test('should have aria-live region for game status', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const statusText = await page.locator('#status-text');
         const ariaLive = await statusText.getAttribute('aria-live');
@@ -199,7 +199,7 @@ test.describe('Accessibility - Focus Management', () => {
 
     test('should show focus indicators', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Focus on a square
         await page.click('.chess-square[data-square="e2"]');
@@ -262,7 +262,7 @@ test.describe('Accessibility - Color Contrast', () => {
 
     test('should have sufficient contrast on light squares', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const square = await page.locator('.chess-square').first();
         const bgColor = await square.evaluate(el => {
@@ -274,7 +274,7 @@ test.describe('Accessibility - Color Contrast', () => {
 
     test('should have sufficient contrast on dark squares', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const square = await page.locator('.chess-square').nth(1);
         const bgColor = await square.evaluate(el => {
@@ -286,7 +286,7 @@ test.describe('Accessibility - Color Contrast', () => {
 
     test('should have visible piece colors', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const piece = await page.locator('.chess-piece').first();
         const color = await piece.evaluate(el => {
@@ -298,7 +298,7 @@ test.describe('Accessibility - Color Contrast', () => {
 
     test('should work in high contrast mode', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify pieces are visible - 32 actual pieces on 64 squares
         const pieces = await page.locator('.chess-piece.has-piece').count();
@@ -328,7 +328,7 @@ test.describe('Accessibility - ARIA Attributes', () => {
 
     test('should have aria-selected on active elements', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const activeBtn = await page.locator('#color-choice button.vd-is-active');
         const selected = await activeBtn.getAttribute('aria-selected');
@@ -357,21 +357,21 @@ test.describe('Accessibility - Color Blindness', () => {
 
     test('should distinguish pieces without color alone', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // White and black pieces should have different glyphs
-        const whitePiece = await page.locator('.chess-piece:has-text("♙")').first();
-        const blackPiece = await page.locator('.chess-piece:has-text("♟")').first();
+        // White and black pieces use distinct assets (data-piece codes differ)
+        const whitePiece = page.locator('.chess-piece[data-piece="wP"]').first();
+        const blackPiece = page.locator('.chess-piece[data-piece="bP"]').first();
 
-        const whiteText = await whitePiece.textContent();
-        const blackText = await blackPiece.textContent();
+        const whiteSrc = await whitePiece.locator('img.chess-piece-img').getAttribute('src');
+        const blackSrc = await blackPiece.locator('img.chess-piece-img').getAttribute('src');
 
-        expect(whiteText).not.toBe(blackText);
+        expect(whiteSrc).not.toBe(blackSrc);
     });
 
     test('should highlight legal moves with pattern', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         await page.click('.chess-square[data-square="e2"]');
 
@@ -384,7 +384,7 @@ test.describe('Accessibility - Color Blindness', () => {
 
     test('should show check with visual indicator', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify status text shows check
         const statusText = await page.locator('#status-text');
@@ -417,7 +417,7 @@ test.describe('Accessibility - Semantic HTML', () => {
 
     test('should use list for move history', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const history = await page.locator('#move-history');
         const tagName = await history.evaluate(el => el.tagName);

@@ -16,7 +16,7 @@ test.describe('Engine Logic - Rules', () => {
         await page.reload();
         // Start game to ensure modules are loaded
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should generate legal pawn moves from starting position', async ({ page }) => {

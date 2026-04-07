@@ -16,7 +16,7 @@ test.describe('Evaluator - Piece Values', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should evaluate starting position as equal', async ({ page }) => {
@@ -240,7 +240,7 @@ test.describe('Evaluator - Piece-Square Tables', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should prefer center control for knights', async ({ page }) => {
@@ -468,7 +468,7 @@ test.describe('Evaluator - Pawn Structure', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should penalize doubled pawns', async ({ page }) => {
@@ -697,7 +697,7 @@ test.describe('Evaluator - Endgame Detection', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should detect middlegame position', async ({ page }) => {
@@ -845,7 +845,7 @@ test.describe('Evaluator - Mobility', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should reward piece mobility', async ({ page }) => {
@@ -930,7 +930,7 @@ test.describe('Evaluator - Performance', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should evaluate position quickly', async ({ page }) => {

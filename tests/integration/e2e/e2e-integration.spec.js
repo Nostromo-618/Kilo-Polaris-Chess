@@ -45,7 +45,7 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Play a few moves
         await makeMove(page, 'e2', 'e4');
@@ -68,7 +68,7 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         // This test verifies the promotion UI exists
         // Full promotion test would require setting up a specific position
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify game starts (one piece div per square; only 32 have pieces)
         const pieces = await page.locator('.chess-piece.has-piece').count();
@@ -79,7 +79,7 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Setup for castling
         await makeMove(page, 'e2', 'e4');
@@ -105,7 +105,7 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Play moves that could lead to en passant
         await makeMove(page, 'e2', 'e4');
@@ -123,7 +123,7 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Try to create a check position: 1. e4 f6 2. Qh5+
         await makeMove(page, 'e2', 'e4');
@@ -142,7 +142,7 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify modal container exists
         const modalContainer = await page.locator('#game-end-modal-container');
@@ -153,7 +153,7 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify game is running
         const statusText = await page.locator('#status-text').textContent();
@@ -164,7 +164,7 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify game is running
         const statusText = await page.locator('#status-text').textContent();
@@ -186,7 +186,7 @@ test.describe('E2E Integration - Game Recovery', () => {
 
     test('should save game state to localStorage', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Make a move
         await page.click('.chess-square[data-square="e2"]');
@@ -205,7 +205,7 @@ test.describe('E2E Integration - Game Recovery', () => {
 
     test('should restore game state on reload', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Make a move
         await page.click('.chess-square[data-square="e2"]');
@@ -224,7 +224,7 @@ test.describe('E2E Integration - Game Recovery', () => {
 
     test('should clear saved game on New Game', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Make a move
         await page.click('.chess-square[data-square="e2"]');
@@ -326,7 +326,7 @@ test.describe('E2E Integration - Concurrent Operations', () => {
 
     test('should handle rapid clicks gracefully', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Rapid clicks
         for (let i = 0; i < 10; i++) {
@@ -351,7 +351,7 @@ test.describe('E2E Integration - Concurrent Operations', () => {
 
     test('should handle difficulty change during game', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Change difficulty
         await page.locator('#difficulty-choice button[data-level="3"]').click();
@@ -363,7 +363,7 @@ test.describe('E2E Integration - Concurrent Operations', () => {
 
     test('should handle color change during game', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Change color
         await page.click('#color-choice button[data-color="black"]');
@@ -386,7 +386,7 @@ test.describe('E2E Integration - Error Handling', () => {
 
     test('should handle invalid move gracefully', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Try to move pawn illegally (e2 to e6 - too far)
         await page.click('.chess-square[data-square="e2"]');
@@ -400,7 +400,7 @@ test.describe('E2E Integration - Error Handling', () => {
 
     test('should handle clicking empty square', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Click empty square
         await page.click('.chess-square[data-square="e4"]');
@@ -412,7 +412,7 @@ test.describe('E2E Integration - Error Handling', () => {
 
     test('should handle clicking opponent piece', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Click black piece (should not select when it's white's turn)
         await page.click('.chess-square[data-square="e7"]');
@@ -424,7 +424,7 @@ test.describe('E2E Integration - Error Handling', () => {
 
     test('should handle game end gracefully', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify modal container exists
         const modalContainer = await page.locator('#game-end-modal-container');
@@ -446,7 +446,7 @@ test.describe('E2E Integration - Performance', () => {
 
     test('should respond to moves quickly', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const startTime = Date.now();
 
@@ -471,7 +471,7 @@ test.describe('E2E Integration - Performance', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Play many moves
         for (let i = 0; i < 20; i++) {

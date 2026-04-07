@@ -45,7 +45,7 @@ test.describe('Special Moves', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Clear path for kingside castling: move e2-e4, then Nf3, then Bc4
         await makeMove(page, 'e2', 'e4');
@@ -69,7 +69,7 @@ test.describe('Special Moves', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Setup for castling
         await makeMove(page, 'e2', 'e4');
@@ -86,16 +86,16 @@ test.describe('Special Moves', () => {
 
         // King should be on g1
         const g1Piece = page.locator('.chess-square[data-square="g1"] .chess-piece');
-        await expect(g1Piece).toHaveText('♔');
+        await expect(g1Piece).toHaveAttribute('data-piece', 'wK');
 
         // Rook should be on f1
         const f1Piece = page.locator('.chess-square[data-square="f1"] .chess-piece');
-        await expect(f1Piece).toHaveText('♖');
+        await expect(f1Piece).toHaveAttribute('data-piece', 'wR');
     });
 
     test('should show pawn double-move from starting position', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Click on a2 pawn
         await page.click('.chess-square[data-square="a2"]');
@@ -112,7 +112,7 @@ test.describe('Special Moves', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Move a2-a3 (single square)
         await makeMove(page, 'a2', 'a3');
@@ -137,7 +137,7 @@ test.describe('Special Moves', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Move e-pawn forward
         await makeMove(page, 'e2', 'e4');

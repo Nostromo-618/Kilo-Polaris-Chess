@@ -14,7 +14,7 @@ test.describe('Move - Basic Move Creation', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should create a basic move', async ({ page }) => {
@@ -156,7 +156,7 @@ test.describe('Move - Promotion Moves', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should create queen promotion move', async ({ page }) => {
@@ -261,7 +261,7 @@ test.describe('Move - En Passant Moves', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should create white en passant capture', async ({ page }) => {
@@ -343,7 +343,7 @@ test.describe('Move - Castling Moves', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should create white kingside castling', async ({ page }) => {
@@ -458,7 +458,7 @@ test.describe('Move - Move Properties', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should have all required properties for basic move', async ({ page }) => {
@@ -554,7 +554,7 @@ test.describe('Move - Edge Cases', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should handle same from and to square', async ({ page }) => {
@@ -611,7 +611,7 @@ test.describe('Move - Validation', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should create valid algebraic notation', async ({ page }) => {

@@ -36,6 +36,10 @@ pnpm run test:quick       # excludes long “full game” AI tests
 - UI: [Vanduo](https://github.com/vanduo-oss/framework) (loaded from [jsDelivr](https://www.jsdelivr.com/) in `index.html`)
 - Engine: move generation, rules, evaluation, and AI search under `js/engine/`
 
+## Third-party assets
+
+Board pieces are SVGs from the **mpchess** set used by [Lichess](https://lichess.org/), vendored from [lila `public/piece/mpchess`](https://github.com/lichess-org/lila/tree/master/public/piece/mpchess). Upstream **lila** is licensed under **AGPL-3.0**; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution and redistribution notes.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

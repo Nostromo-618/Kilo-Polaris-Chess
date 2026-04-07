@@ -18,7 +18,7 @@ test.describe('Security - Input Validation', () => {
 
     test('should sanitize move input', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Try to inject invalid move
         await page.evaluate(() => {
@@ -72,7 +72,7 @@ test.describe('Security - XSS Prevention', () => {
 
     test('should prevent XSS in move history', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Try to inject script via localStorage
         await page.evaluate(() => {
@@ -94,7 +94,7 @@ test.describe('Security - XSS Prevention', () => {
 
     test('should prevent XSS in status text', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Try to inject via game state
         await page.evaluate(() => {
@@ -115,15 +115,21 @@ test.describe('Security - XSS Prevention', () => {
 
     test('should escape piece names', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify pieces use safe text content
         const pieces = await page.locator('.chess-piece');
         const count = await pieces.count();
 
         for (let i = 0; i < count; i++) {
-            const text = await pieces.nth(i).textContent();
-            expect(text).toMatch(/^[♔♕♖♗♘♙♚♛♜♝♞♟]*$/);
+            const el = pieces.nth(i);
+            const hasPiece = await el.evaluate((node) => node.classList.contains('has-piece'));
+            if (hasPiece) {
+                const code = await el.getAttribute('data-piece');
+                expect(code).toMatch(/^[wb][PRNBQK]$/);
+            }
+            const text = await el.textContent();
+            expect(text.trim()).toBe('');
         }
     });
 
@@ -190,7 +196,7 @@ test.describe('Security - Storage Security', () => {
 
     test('should clear storage on new game', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Make a move to save
         await page.click('.chess-square[data-square="e2"]');
@@ -226,7 +232,7 @@ test.describe('Security - Worker Communication', () => {
 
     test('should validate worker messages', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Make a move to trigger AI
         await page.click('.chess-square[data-square="e2"]');
@@ -245,7 +251,7 @@ test.describe('Security - Worker Communication', () => {
 
     test('should handle worker errors gracefully', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Try to break worker
         await page.evaluate(() => {
@@ -301,20 +307,27 @@ test.describe('Security - DOM Security', () => {
 
     test('should sanitize innerHTML usage', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Check that pieces use textContent, not innerHTML
-        const usesInnerHTML = await page.evaluate(() => {
+        // Occupied squares use a single decorative <img>; empty squares must stay empty (no HTML injection)
+        const unsafeOrMalformed = await page.evaluate(() => {
             const pieces = document.querySelectorAll('.chess-piece');
             for (const piece of pieces) {
-                if (piece.innerHTML !== piece.textContent) {
+                const html = piece.innerHTML.toLowerCase();
+                if (html.includes('<script') || html.includes('onerror=') || html.includes('javascript:')) {
+                    return true;
+                }
+                if (piece.classList.contains('has-piece')) {
+                    const imgs = piece.querySelectorAll('img.chess-piece-img');
+                    if (imgs.length !== 1 || piece.children.length !== 1) return true;
+                } else if (piece.innerHTML.trim() !== '') {
                     return true;
                 }
             }
             return false;
         });
 
-        expect(usesInnerHTML).toBe(false);
+        expect(unsafeOrMalformed).toBe(false);
     });
 });
 
@@ -335,7 +348,7 @@ test.describe('Security - CSRF Protection', () => {
         });
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const base = new URL(page.url());
         for (const url of requests) {
@@ -348,7 +361,7 @@ test.describe('Security - CSRF Protection', () => {
 
     test('should not send credentials', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify no cookies are set
         const cookies = await page.context().cookies();
@@ -378,7 +391,7 @@ test.describe('Security - Error Handling', () => {
 
     test('should handle null references gracefully', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Try to access null element
         await page.evaluate(() => {
@@ -395,7 +408,7 @@ test.describe('Security - Error Handling', () => {
 
     test('should handle undefined values', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Set undefined in storage
         await page.evaluate(() => {

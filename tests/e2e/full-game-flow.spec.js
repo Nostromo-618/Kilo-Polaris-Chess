@@ -50,14 +50,14 @@ test.describe('Full Game Flow', () => {
 
         // Start game as white
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Test that we can make the first move of Scholar's opening: e4
         await makeMove(page, 'e2', 'e4');
 
         // Verify the pawn moved
         const e4Piece = page.locator('.chess-square[data-square="e4"] .chess-piece');
-        await expect(e4Piece).toHaveText('♙');
+        await expect(e4Piece).toHaveAttribute('data-piece', 'wP');
 
         // Wait for AI response
         await waitForAIMove(page);
@@ -67,7 +67,7 @@ test.describe('Full Game Flow', () => {
 
         // Verify bishop moved to c4
         const c4Piece = page.locator('.chess-square[data-square="c4"] .chess-piece');
-        await expect(c4Piece).toHaveText('♗');
+        await expect(c4Piece).toHaveAttribute('data-piece', 'wB');
 
         // Test passed - we verified the opening sequence works
         // Full Scholar's Mate requires specific AI responses which is not testable deterministically
@@ -76,7 +76,7 @@ test.describe('Full Game Flow', () => {
     test('should show game end modal on checkmate', async ({ page }) => {
         // This test verifies the modal container exists and modal is hidden before game ends
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Verify the game-end modal container exists
         const modalContainer = page.locator('#game-end-modal-container');
@@ -91,7 +91,7 @@ test.describe('Full Game Flow', () => {
 
     test('should update turn indicator after each move', async ({ page }) => {
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Get initial turn text
         const turnIndicator = page.locator('#turn-indicator');
@@ -107,7 +107,7 @@ test.describe('Full Game Flow', () => {
         test.slow();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Make first move
         await makeMove(page, 'e2', 'e4');

@@ -143,7 +143,7 @@ test.describe('Responsive Layout', () => {
         test('game should be playable on mobile', async ({ page }) => {
             await page.locator('#color-choice button[data-color="white"]').click();
             await page.click('#new-game-btn');
-            await page.waitForSelector('.chess-piece:has-text("♙")');
+            await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
             const e2Square = page.locator('.chess-square[data-square="e2"]');
             await e2Square.click();
@@ -152,7 +152,7 @@ test.describe('Responsive Layout', () => {
             await page.click('.chess-square[data-square="e4"]');
 
             const e4Piece = page.locator('.chess-square[data-square="e4"] .chess-piece');
-            await expect(e4Piece).toHaveText('♙');
+            await expect(e4Piece).toHaveAttribute('data-piece', 'wP');
         });
     });
 });

@@ -14,7 +14,7 @@ test.describe('Engine Logic - GameState', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should create starting position correctly', async ({ page }) => {

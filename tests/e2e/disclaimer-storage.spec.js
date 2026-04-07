@@ -135,7 +135,7 @@ test.describe('LocalStorage: Game Progress', () => {
 
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
         await page.waitForTimeout(500);
@@ -153,7 +153,7 @@ test.describe('LocalStorage: Game Progress', () => {
 
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
         await page.waitForTimeout(600);
@@ -172,7 +172,7 @@ test.describe('LocalStorage: Game Progress', () => {
 
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
         await page.waitForFunction(() => {

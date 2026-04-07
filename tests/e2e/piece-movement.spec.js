@@ -17,7 +17,7 @@ test.describe('Piece Movement', () => {
         // Start a new game as white (first move must be ours)
         await page.click('#new-game-btn');
         // Wait for game to initialize
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should highlight selected piece', async ({ page }) => {
@@ -55,10 +55,10 @@ test.describe('Piece Movement', () => {
 
         // e4 should now have the pawn
         const e4Piece = e4Square.locator('.chess-piece');
-        await expect(e4Piece).toHaveText('♙');
+        await expect(e4Piece).toHaveAttribute('data-piece', 'wP');
 
         // e2 should be empty
-        await expect(e2Piece).toHaveText('');
+        await expect(e2Piece).not.toHaveClass('has-piece');
     });
 
     test('should highlight last move squares', async ({ page }) => {

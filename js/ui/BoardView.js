@@ -3,26 +3,37 @@
  *
  * Pure UI component responsible for:
  * - Rendering an 8x8 board grid.
- * - Displaying pieces as Unicode glyphs.
+ * - Displaying pieces as SVG images (Lichess mpchess set).
  * - Highlighting selected square, legal moves, and last move.
  * - Emitting square selection events to the outside world.
  *
  * This module does NOT implement chess rules; it is presentation-only.
  */
 
-const PIECE_TO_GLYPH = {
-  wP: "♙",
-  wN: "♘",
-  wB: "♗",
-  wR: "♖",
-  wQ: "♕",
-  wK: "♔",
-  bP: "♟",
-  bN: "♞",
-  bB: "♝",
-  bR: "♜",
-  bQ: "♛",
-  bK: "♚",
+/** Root-relative URL prefix for piece SVGs (served from repo root). */
+export const PIECE_IMAGE_BASE = "pieces/mpchess";
+
+/**
+ * @param {string} code - e.g. "wP", "bK"
+ * @returns {string}
+ */
+export function getPieceImageUrl(code) {
+  return `${PIECE_IMAGE_BASE}/${code}.svg`;
+}
+
+const PIECE_DESCRIPTIONS = {
+  wP: "White pawn",
+  wN: "White knight",
+  wB: "White bishop",
+  wR: "White rook",
+  wQ: "White queen",
+  wK: "White king",
+  bP: "Black pawn",
+  bN: "Black knight",
+  bB: "Black bishop",
+  bR: "Black rook",
+  bQ: "Black queen",
+  bK: "Black king",
 };
 
 export class BoardView {
@@ -172,7 +183,6 @@ export class BoardView {
     // Update piece content and highlighting
     this.squareEls.forEach((squareEl, square) => {
       const code = boardState[square] || null;
-      const pieceDescriptions = { wP: "White pawn", wN: "White knight", wB: "White bishop", wR: "White rook", wQ: "White queen", wK: "White king", bP: "Black pawn", bN: "Black knight", bB: "Black bishop", bR: "Black rook", bQ: "Black queen", bK: "Black king" };
 
       // Find or create piece element
       let pieceEl = squareEl.querySelector(".chess-piece");
@@ -184,11 +194,24 @@ export class BoardView {
       }
 
       if (code) {
-        pieceEl.textContent = PIECE_TO_GLYPH[code] || "?";
-        pieceEl.setAttribute("aria-label", pieceDescriptions[code]);
+        let img = pieceEl.querySelector("img");
+        if (!img) {
+          img = document.createElement("img");
+          img.classList.add("chess-piece-img");
+          img.alt = "";
+          img.decoding = "async";
+          pieceEl.appendChild(img);
+        }
+        img.src = getPieceImageUrl(code);
+        pieceEl.setAttribute("data-piece", code);
+        pieceEl.setAttribute("aria-label", PIECE_DESCRIPTIONS[code] || code);
         pieceEl.classList.add("has-piece");
       } else {
-        pieceEl.textContent = "";
+        const img = pieceEl.querySelector("img");
+        if (img) {
+          img.remove();
+        }
+        pieceEl.removeAttribute("data-piece");
         pieceEl.setAttribute("aria-label", "Empty square");
         pieceEl.classList.remove("has-piece");
       }

@@ -96,15 +96,20 @@
   height: 100%;
   margin: 0;
   padding: 0;
-  color: var(--piece-black);
   z-index: 2;
-  font-size: inherit;
-  line-height: 1;
-  text-align: center;
+  line-height: 0;
   user-select: none;
   cursor: pointer;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  font-family: "Segoe UI", "Apple Color Emoji", "Noto Color Emoji", "Symbola", "Arial Unicode MS", monospace;
+}
+
+.chess-piece-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 /* Mobile piece sizing: see @media blocks below (991px / 575px) */
@@ -364,6 +369,56 @@
 }
 
 /* ============================================
+   NEW GAME (above Game Settings; full width like form groups)
+   ============================================ */
+
+.controls-section .new-game-action {
+  width: 100%;
+  margin-bottom: var(--spacing-4);
+  display: flex;
+  justify-content: center;
+}
+
+.controls-section .new-game-action .vd-btn {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Match side panel glass card instead of loud primary fill (especially in dark mode) */
+.side-panel.glass-panel .controls-section .new-game-action #new-game-btn.vd-btn-primary {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow);
+  color: var(--text-primary) !important;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    backdrop-filter var(--transition-fast),
+    filter var(--transition-fast);
+}
+
+.side-panel.glass-panel .controls-section .new-game-action #new-game-btn.vd-btn-primary:hover:not(:disabled):not(.disabled):not(.is-disabled) {
+  background: var(--color-primary) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: var(--color-primary) !important;
+  color: var(--color-white) !important;
+  filter: none;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.side-panel.glass-panel .controls-section .new-game-action #new-game-btn.vd-btn-primary:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+/* ============================================
    SETTINGS BUTTON GROUPS
    ============================================ */
 
@@ -482,10 +537,6 @@
 
   .side-panel {
     padding: 10px;
-  }
-
-  .chess-piece {
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
   }
 
   #board-container {

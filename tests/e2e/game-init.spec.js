@@ -44,10 +44,9 @@ test.describe('Game Initialization', () => {
         const status = page.locator('#status-text');
         await expect(status).not.toContainText('Initialize a new game');
 
-        // Pieces should be rendered on the board
-        const pieces = page.locator('.chess-piece');
-        const piecesWithContent = pieces.filter({ hasText: /[♔♕♖♗♘♙♚♛♜♝♞♟]/ });
-        await expect(piecesWithContent.first()).toBeVisible();
+        // Pieces should be rendered on the board (SVG-backed; data-piece on occupied squares)
+        const occupied = page.locator('.chess-piece.has-piece');
+        await expect(occupied.first()).toBeVisible();
     });
 
     test('should render all starting pieces correctly', async ({ page }) => {
@@ -55,12 +54,7 @@ test.describe('Game Initialization', () => {
 
         // Wait for board to be rendered with pieces
         await page.waitForFunction(() => {
-            const pieces = document.querySelectorAll('.chess-piece');
-            let count = 0;
-            pieces.forEach(p => {
-                if (p.textContent && p.textContent.trim()) count++;
-            });
-            return count === 32; // 32 pieces at game start
+            return document.querySelectorAll('.chess-piece.has-piece').length === 32;
         });
     });
 

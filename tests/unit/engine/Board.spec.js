@@ -14,7 +14,7 @@ test.describe('Board - Algebraic Notation', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should convert a1 to index 0', async ({ page }) => {
@@ -141,7 +141,7 @@ test.describe('Board - Index Calculations', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should calculate file from index', async ({ page }) => {
@@ -230,7 +230,7 @@ test.describe('Board - Clone Operations', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should create independent copy of board', async ({ page }) => {
@@ -326,7 +326,7 @@ test.describe('Board - Opposite Color', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should return black for white', async ({ page }) => {
@@ -370,7 +370,7 @@ test.describe('Board - Square Colors', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should identify light squares', async ({ page }) => {
@@ -441,7 +441,7 @@ test.describe('Board - Edge Cases', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should handle corner squares', async ({ page }) => {
@@ -517,7 +517,7 @@ test.describe('Board - Performance', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should convert notation quickly', async ({ page }) => {

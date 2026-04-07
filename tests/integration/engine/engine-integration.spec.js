@@ -14,7 +14,7 @@ test.describe('Engine Integration - GameState + Rules', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should generate legal moves from game state', async ({ page }) => {
@@ -207,7 +207,7 @@ test.describe('Engine Integration - AI + GameState', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should find best move from game state', async ({ page }) => {
@@ -317,7 +317,7 @@ test.describe('Engine Integration - Move + Rules', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should create and validate move', async ({ page }) => {
@@ -461,7 +461,7 @@ test.describe('Engine Integration - Full Game Flow', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should play complete game with engine', async ({ page }) => {

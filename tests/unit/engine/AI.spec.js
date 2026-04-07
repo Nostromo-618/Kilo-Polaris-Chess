@@ -14,7 +14,7 @@ test.describe('AI - Transposition Table', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should compute consistent Zobrist hash for same position', async ({ page }) => {
@@ -184,7 +184,7 @@ test.describe('AI - Move Ordering', () => {
         });
         await page.reload();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should order captures before quiet moves (MVV-LVA)', async ({ page }) => {
@@ -281,7 +281,7 @@ test.describe('AI - Search Algorithms', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should perform minimax search with alpha-beta pruning', async ({ page }) => {
@@ -400,7 +400,7 @@ test.describe('AI - Difficulty Levels', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should use different randomness levels for each difficulty', async ({ page }) => {
@@ -451,7 +451,7 @@ test.describe('AI - Difficulty Levels', () => {
         await page.locator('#thinking-choice button[data-time="5"]').click();
 
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Make e4
         await page.click('.chess-square[data-square="e2"]');
@@ -480,7 +480,7 @@ test.describe('AI - Performance', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should complete level 1 search within time limit', async ({ page }) => {
@@ -554,7 +554,7 @@ test.describe('AI - Edge Cases', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should handle checkmate position', async ({ page }) => {

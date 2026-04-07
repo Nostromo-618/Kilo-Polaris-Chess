@@ -15,7 +15,7 @@ test.describe('AI Performance - Search Depth vs Time', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should complete level 1 search within 100ms', async ({ page }) => {
@@ -163,7 +163,7 @@ test.describe('AI Performance - Memory Usage', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should not leak memory during repeated searches', async ({ page }) => {
@@ -251,7 +251,7 @@ test.describe('AI Performance - Transposition Table Hit Rates', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should achieve transposition table hits', async ({ page }) => {
@@ -321,7 +321,7 @@ test.describe('AI Performance - Search Quality', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should find better moves at higher levels', async ({ page }) => {
@@ -430,7 +430,7 @@ test.describe('AI Performance - Consistency', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should return consistent results for same position', async ({ page }) => {

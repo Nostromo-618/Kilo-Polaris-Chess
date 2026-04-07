@@ -15,7 +15,7 @@ test.describe('UI Integration - BoardView + Game State', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should update board view after move', async ({ page }) => {
@@ -24,11 +24,11 @@ test.describe('UI Integration - BoardView + Game State', () => {
         await page.click('.chess-square[data-square="e4"]');
 
         // Verify piece moved
-        const e4Piece = await page.locator('.chess-square[data-square="e4"] .chess-piece').textContent();
-        const e2Piece = await page.locator('.chess-square[data-square="e2"] .chess-piece').textContent();
+        const e4Piece = await page.locator('.chess-square[data-square="e4"] .chess-piece').getAttribute('data-piece');
+        const e2Piece = await page.locator('.chess-square[data-square="e2"] .chess-piece').getAttribute('data-piece');
 
-        expect(e4Piece).toBe('♙');
-        expect(e2Piece).toBe('');
+        expect(e4Piece).toBe('wP');
+        expect(e2Piece).toBeNull();
     });
 
     test('should update turn indicator after move', async ({ page }) => {
@@ -127,8 +127,7 @@ test.describe('UI Integration - Controls + Game State', () => {
     test('should start new game when clicking New Game button', async ({ page }) => {
         await page.click('#new-game-btn');
 
-        // Verify board is set up - 32 pieces with text, 64 total .chess-piece divs
-        const piecesWithText = await page.locator('.chess-piece:has-text("♙♘♗♖♕♔♟♞♝♜♛♚")').count();
+        // Verify board is set up - 32 occupied squares (64 total .chess-piece divs)
         const pieces = await page.locator('.chess-piece.has-piece').count();
         expect(pieces).toBe(32);
     });
@@ -330,7 +329,7 @@ test.describe('UI Integration - Game End Modal', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should have game end modal container', async ({ page }) => {
@@ -357,7 +356,7 @@ test.describe('UI Integration - Status Display', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should show current turn in status', async ({ page }) => {
@@ -402,7 +401,7 @@ test.describe('UI Integration - Board Flipping', () => {
     test('should show white perspective when playing as white', async ({ page }) => {
         await page.click('#color-choice button[data-color="white"]');
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // e1 should be visible in lower ranks
         const e1Element = await page.locator('.chess-square[data-square="e1"]');
@@ -414,7 +413,7 @@ test.describe('UI Integration - Board Flipping', () => {
     test('should show black perspective when playing black', async ({ page }) => {
         await page.click('#color-choice button[data-color="black"]');
         await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // e8 should be visible in lower ranks when flipped
         const e8Element = await page.locator('.chess-square[data-square="e8"]');

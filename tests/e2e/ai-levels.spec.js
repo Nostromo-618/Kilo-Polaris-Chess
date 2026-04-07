@@ -45,7 +45,7 @@ test.describe('AI Levels - Smoke Tests', () => {
 
             // Start new game
             await page.click('#new-game-btn');
-            await page.waitForSelector('.chess-piece:has-text("♙")');
+            await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
             // Make player move: e4
             await makeMove(page, 'e2', 'e4');
@@ -87,7 +87,7 @@ test.describe('AI Levels - Full Game Tests', () => {
 
             // Start new game
             await page.click('#new-game-btn');
-            await page.waitForSelector('.chess-piece:has-text("♙")');
+            await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
             // Play several moves
             const openingMoves = [
