@@ -116,7 +116,7 @@ export class Game {
    * @param {number} level 1..5
    */
   setDifficulty(level) {
-    const clamped = Math.max(1, Math.min(5, Number(level) || 5));
+    const clamped = Math.max(1, Math.min(6, Number(level) || 5));
     this.difficulty = clamped;
   }
 

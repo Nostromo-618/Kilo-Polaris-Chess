@@ -1,7 +1,7 @@
 /**
  * AI.js
  *
- * Chess engine search implementation with 5 difficulty levels.
+ * Chess engine search implementation with 6 difficulty levels.
  * - Pure JS, no external dependencies.
  * - Uses:
  *   - Legal move generation from Rules.js
@@ -14,7 +14,17 @@
  *   - Null move pruning
  *   - Late move reductions (LMR)
  *   - Quiescence search
- *   - Slight randomness at all levels for variety
+ *   - Slight randomness at lower levels for variety
+ *
+ * Level 6 additions:
+ *   - Search depth 7 with zero randomness
+ *   - Futility pruning at shallow depths
+ *   - Reverse futility pruning (static null move pruning)
+ *   - Logarithmic LMR reductions
+ *   - Enhanced quiescence (delta pruning, MVV-LVA, no cap)
+ *   - TT move ordering priority
+ *   - Tighter aspiration windows with progressive widening
+ *   - Larger transposition table (500k entries)
  *
  * Difficulty mapping (approx; depth is ply, not full moves):
  *   1: depth 1 (material + small noise, some randomness)
@@ -22,6 +32,7 @@
  *   3: depth 3
  *   4: depth 4 + quiescence + null move
  *   5: depth 5 + quiescence + null move + LMR (full optimizations)
+ *   6: depth 7 + all Level 5 features + futility/RFP + enhanced quiescence + zero randomness
  */
 
 import { oppositeColor, cloneBoard } from "./Board.js";
@@ -559,14 +570,22 @@ const TT_EXACT = 0;
 const TT_LOWER = 1;
 const TT_UPPER = 2;
 
-/** Maximum transposition table entries */
-const TT_MAX_SIZE = 100000;
+/** Default transposition table size */
+const TT_MAX_SIZE_DEFAULT = 100000;
+/** Larger transposition table for Level 6 */
+const TT_MAX_SIZE_L6 = 500000;
 
 /** Null move reduction depth */
 const NULL_MOVE_REDUCTION = 3;
 
 /** Minimum pieces (non-pawns) before disabling null move pruning */
 const ENDGAME_PIECE_THRESHOLD = 7;
+
+/** Futility pruning margins by depth (centipawns) */
+const FUTILITY_MARGINS = [0, 200, 500, 900];
+
+/** Reverse futility pruning margins by depth (centipawns) */
+const RFP_MARGINS = [0, 120, 300, 500];
 
 export class AI {
   /**
@@ -582,6 +601,7 @@ export class AI {
       3: 0.10,
       4: 0.05,
       5: 0.03,
+      6: 0.0,
     };
 
     this.depthForLevel = {
@@ -590,6 +610,7 @@ export class AI {
       3: 3,
       4: 4,
       5: 5,
+      6: 7,
     };
 
     // Killer moves: 2 slots per depth level (up to depth 20)
@@ -604,8 +625,9 @@ export class AI {
       this.historyTable.push(new Array(64).fill(0));
     }
 
-    // Transposition table - fixed size array for speed
-    this.transpositionTable = new Array(TT_MAX_SIZE);
+    // Transposition table - default size, resized for Level 6
+    this.ttSize = TT_MAX_SIZE_DEFAULT;
+    this.transpositionTable = new Array(TT_MAX_SIZE_DEFAULT);
   }
 
   /**
@@ -626,6 +648,17 @@ export class AI {
       for (let j = 0; j < 64; j++) {
         this.historyTable[i][j] = Math.floor(this.historyTable[i][j] / 2);
       }
+    }
+  }
+
+  /**
+   * Resize the transposition table if needed.
+   */
+  resizeTT(level) {
+    const targetSize = level >= 6 ? TT_MAX_SIZE_L6 : TT_MAX_SIZE_DEFAULT;
+    if (this.ttSize !== targetSize) {
+      this.ttSize = targetSize;
+      this.transpositionTable = new Array(targetSize);
     }
   }
 
@@ -674,37 +707,47 @@ export class AI {
 
   /**
    * Order moves for better alpha-beta pruning efficiency.
-   * Shared between searchRoot and minimax to avoid duplication.
+   * For Level 6: TT best move gets highest priority.
    */
-  orderMoves(moves, depth) {
+  orderMoves(moves, depth, ttBestMove) {
     return moves.slice().sort((a, b) => {
       let aScore = 0;
       let bScore = 0;
 
-      if (a.captured) {
-        aScore = pieceValueApprox(a.captured) * 10 - pieceValueApprox(a.piece) + 10000;
-      } else if (this.isKillerMove(a, depth)) {
-        aScore = 9000;
-      } else {
-        aScore = this.getHistoryScore(a);
+      // TT best move gets top priority
+      if (ttBestMove) {
+        if (a.from === ttBestMove.from && a.to === ttBestMove.to) aScore = 20000;
+        if (b.from === ttBestMove.from && b.to === ttBestMove.to) bScore = 20000;
       }
-      if (a.promotion) aScore += pieceValueApprox(a.promotion) * 10;
 
-      if (b.captured) {
-        bScore = pieceValueApprox(b.captured) * 10 - pieceValueApprox(b.piece) + 10000;
-      } else if (this.isKillerMove(b, depth)) {
-        bScore = 9000;
-      } else {
-        bScore = this.getHistoryScore(b);
+      if (aScore < 20000) {
+        if (a.captured) {
+          aScore = pieceValueApprox(a.captured) * 10 - pieceValueApprox(a.piece) + 10000;
+        } else if (this.isKillerMove(a, depth)) {
+          aScore = 9000;
+        } else {
+          aScore = this.getHistoryScore(a);
+        }
+        if (a.promotion) aScore += pieceValueApprox(a.promotion) * 10;
       }
-      if (b.promotion) bScore += pieceValueApprox(b.promotion) * 10;
+
+      if (bScore < 20000) {
+        if (b.captured) {
+          bScore = pieceValueApprox(b.captured) * 10 - pieceValueApprox(b.piece) + 10000;
+        } else if (this.isKillerMove(b, depth)) {
+          bScore = 9000;
+        } else {
+          bScore = this.getHistoryScore(b);
+        }
+        if (b.promotion) bScore += pieceValueApprox(b.promotion) * 10;
+      }
 
       return bScore - aScore;
     });
   }
 
   probeTable(key, depth, alpha, beta) {
-    const index = Number(key % BigInt(TT_MAX_SIZE));
+    const index = Number(key % BigInt(this.ttSize));
     const entry = this.transpositionTable[index];
     
     if (!entry || entry.depth < depth) return null;
@@ -715,8 +758,18 @@ export class AI {
     return null;
   }
 
+  /**
+   * Probe TT for best move only (even if depth insufficient for score).
+   */
+  probeTTMove(key) {
+    const index = Number(key % BigInt(this.ttSize));
+    const entry = this.transpositionTable[index];
+    if (!entry) return null;
+    return entry.bestMove || null;
+  }
+
   storeTable(key, depth, score, flag, bestMove) {
-    const index = Number(key % BigInt(TT_MAX_SIZE));
+    const index = Number(key % BigInt(this.ttSize));
     const existing = this.transpositionTable[index];
     
     // Always replace if existing entry is shallower or equal
@@ -729,8 +782,11 @@ export class AI {
    * Top-level API used by Game.
    */
   async findBestMove(gameState, { level, forColor, timeout = 10000 }) {
-    const clampedLevel = Math.max(1, Math.min(5, Number(level) || 1));
+    const clampedLevel = Math.max(1, Math.min(6, Number(level) || 1));
     const depth = this.depthForLevel[clampedLevel];
+
+    // Resize TT for Level 6
+    this.resizeTT(clampedLevel);
 
     const baseState = new SearchState(gameState);
     const legalMoves = generateLegalMoves(baseState);
@@ -768,7 +824,11 @@ export class AI {
 
   searchRoot(state, legalMoves, depth, color, { level, timeout, startTime, previousBestScore }) {
     const isMaximizing = state.activeColor === color;
-    const ordered = this.orderMoves(legalMoves, depth);
+
+    // Get TT best move for ordering
+    const ttKey = level >= 3 ? state.hash : null;
+    const ttBestMove = ttKey ? this.probeTTMove(ttKey) : null;
+    const ordered = this.orderMoves(legalMoves, depth, ttBestMove);
 
     if (ordered.length === 0) return null;
 
@@ -777,8 +837,8 @@ export class AI {
     let alpha = -Infinity;
     let beta = Infinity;
 
-    // Aspiration windows for deeper searches
-    const ASPIRATION_WINDOW = 50; // centipawns
+    // Aspiration windows: tighter for Level 6
+    const ASPIRATION_WINDOW = level >= 6 ? 25 : 50;
     if (depth >= 3 && previousBestScore !== undefined) {
       alpha = previousBestScore - ASPIRATION_WINDOW;
       beta = previousBestScore + ASPIRATION_WINDOW;
@@ -786,8 +846,9 @@ export class AI {
 
     let attempt = 0;
     let searchComplete = false;
+    const maxAttempts = level >= 6 ? 5 : 3; // More widening attempts for L6
 
-    while (!searchComplete && attempt < 3) {
+    while (!searchComplete && attempt < maxAttempts) {
       let currentAlpha = alpha;
       let currentBeta = beta;
       let scoreOutsideWindow = false;
@@ -806,11 +867,11 @@ export class AI {
         // Check if score fell outside aspiration window
         if (score <= currentAlpha) {
           scoreOutsideWindow = true;
-          currentAlpha = -Infinity; // Widen window for retry
+          currentAlpha = -Infinity;
         }
         if (score >= currentBeta) {
           scoreOutsideWindow = true;
-          currentBeta = Infinity; // Widen window for retry
+          currentBeta = Infinity;
         }
 
         if (isMaximizing) {
@@ -826,11 +887,25 @@ export class AI {
 
       if (!scoreOutsideWindow) {
         searchComplete = true;
+      } else {
+        // Progressive widening for Level 6
+        if (level >= 6) {
+          const widenings = [50, 100, 200, Infinity];
+          const wIdx = Math.min(attempt, widenings.length - 1);
+          const w = widenings[wIdx];
+          if (previousBestScore !== undefined && w !== Infinity) {
+            alpha = previousBestScore - w;
+            beta = previousBestScore + w;
+          } else {
+            alpha = -Infinity;
+            beta = Infinity;
+          }
+        }
       }
       attempt++;
     }
 
-    // Slight randomness
+    // Slight randomness (zero for Level 6)
     if (!(timeout && startTime && Date.now() - startTime >= timeout)) {
       const jitter = this.randomness[level] || 0;
       if (jitter > 0 && ordered.length > 1) {
@@ -861,9 +936,12 @@ export class AI {
 
     // Transposition table lookup (only at level 3+)
     const ttKey = level >= 3 ? state.hash : null;
+    let ttBestMove = null;
     if (ttKey) {
       const ttScore = this.probeTable(ttKey, depth, alpha, beta);
       if (ttScore !== null) return ttScore;
+      // Get TT best move for ordering even if score isn't usable
+      ttBestMove = this.probeTTMove(ttKey);
     }
 
     const inCheck = isInCheck(state);
@@ -884,12 +962,25 @@ export class AI {
       }
 
       if (depth <= 0 && level >= 4) {
-        const qScore = this.quiescence(state, alpha, beta, rootColor, baseScore, timeout, startTime);
+        const qScore = this.quiescence(state, alpha, beta, rootColor, baseScore, timeout, startTime, level);
         if (qScore === null) return baseScore;
         return qScore;
       }
 
       return baseScore;
+    }
+
+    // === Reverse Futility Pruning (Static Null Move Pruning) ===
+    // At expected cut-nodes: if static eval - margin >= beta, prune
+    if (level >= 6 && !inCheck && depth <= 3 && allowNullMove) {
+      const staticEval = evaluate(state, rootColor);
+      const rfpMargin = RFP_MARGINS[depth] || 0;
+      if (isMaximizing && staticEval - rfpMargin >= beta) {
+        return beta;
+      }
+      if (!isMaximizing && staticEval + rfpMargin <= alpha) {
+        return alpha;
+      }
     }
 
     // Null move pruning
@@ -924,7 +1015,21 @@ export class AI {
       }
     }
 
-    const ordered = this.orderMoves(legalMoves, depth);
+    // === Futility Pruning setup ===
+    let canFutilityPrune = false;
+    let staticEvalForFP = 0;
+    if (level >= 6 && !inCheck && depth <= 3 && depth >= 1) {
+      staticEvalForFP = evaluate(state, rootColor);
+      const margin = FUTILITY_MARGINS[depth] || 0;
+      if (isMaximizing && staticEvalForFP + margin <= alpha) {
+        canFutilityPrune = true;
+      }
+      if (!isMaximizing && staticEvalForFP - margin >= beta) {
+        canFutilityPrune = true;
+      }
+    }
+
+    const ordered = this.orderMoves(legalMoves, depth, ttBestMove);
     if (ordered.length === 0) return isMaximizing ? -Infinity : Infinity;
 
     let bestMove = ordered[0];
@@ -935,12 +1040,26 @@ export class AI {
         if (timeout && startTime && i % 10 === 0 && Date.now() - startTime >= timeout) return null;
 
         const move = ordered[i];
+
+        // Futility pruning: skip quiet moves that can't raise score above alpha
+        if (canFutilityPrune && i > 0 && !move.captured && !move.promotion && !move.isEnPassant) {
+          continue;
+        }
         
         // Make move incrementally
         state.makeMove(move);
 
+        // Compute LMR reduction
         let reduction = 0;
-        if (level >= 5 && depth >= 3 && i >= 4 && !move.captured && !move.promotion && !inCheck) {
+        if (level >= 6 && depth >= 3 && i >= 3 && !move.captured && !move.promotion && !inCheck) {
+          // Logarithmic LMR for Level 6
+          reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(i + 1) / 2.5));
+          reduction = Math.min(reduction, depth - 2);
+          // Don't reduce killer moves or high-history moves
+          if (this.isKillerMove(move, depth) || this.getHistoryScore(move) > 500) {
+            reduction = 0;
+          }
+        } else if (level >= 5 && depth >= 3 && i >= 4 && !move.captured && !move.promotion && !inCheck) {
           reduction = 1;
           if (i >= 8) reduction = 2;
         }
@@ -960,7 +1079,7 @@ export class AI {
         }
 
         if (child !== null && reduction > 0 && child > alpha) {
-          // Undo before re-search
+          // Undo before re-search at full depth
           state.undoMove();
           state.makeMove(move);
           child = this.minimax(state, depth - 1, alpha, beta, rootColor, false, level, timeout, startTime, true);
@@ -996,12 +1115,23 @@ export class AI {
       if (timeout && startTime && i % 10 === 0 && Date.now() - startTime >= timeout) return null;
 
       const move = ordered[i];
+
+      // Futility pruning for minimizing
+      if (canFutilityPrune && i > 0 && !move.captured && !move.promotion && !move.isEnPassant) {
+        continue;
+      }
       
       // Make move incrementally
       state.makeMove(move);
 
       let reduction = 0;
-      if (level >= 5 && depth >= 3 && i >= 4 && !move.captured && !move.promotion && !inCheck) {
+      if (level >= 6 && depth >= 3 && i >= 3 && !move.captured && !move.promotion && !inCheck) {
+        reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(i + 1) / 2.5));
+        reduction = Math.min(reduction, depth - 2);
+        if (this.isKillerMove(move, depth) || this.getHistoryScore(move) > 500) {
+          reduction = 0;
+        }
+      } else if (level >= 5 && depth >= 3 && i >= 4 && !move.captured && !move.promotion && !inCheck) {
         reduction = 1;
         if (i >= 8) reduction = 2;
       }
@@ -1021,7 +1151,7 @@ export class AI {
       }
 
       if (child !== null && reduction > 0 && child < beta) {
-        // Undo before re-search
+        // Undo before re-search at full depth
         state.undoMove();
         state.makeMove(move);
         child = this.minimax(state, depth - 1, alpha, beta, rootColor, true, level, timeout, startTime, true);
@@ -1051,7 +1181,7 @@ export class AI {
     return value;
   }
 
-  quiescence(state, alpha, beta, rootColor, standPat, timeout, startTime) {
+  quiescence(state, alpha, beta, rootColor, standPat, timeout, startTime, level) {
     if (timeout && startTime && Date.now() - startTime >= timeout) return null;
 
     let value = standPat;
@@ -1062,21 +1192,55 @@ export class AI {
 
     const allMoves = generateLegalMoves(state);
     const captureMoves = allMoves.filter((m) => m.captured);
-    const limited = captureMoves.slice(0, 16);
 
-    for (let i = 0; i < limited.length; i++) {
+    // For Level 6: sort by MVV-LVA, no cap on captures; add delta pruning
+    // For lower levels: simple slice(0, 16) cap
+    let movesToSearch;
+    if (level >= 6) {
+      // Sort captures by MVV-LVA
+      movesToSearch = captureMoves.sort((a, b) => {
+        const aVal = pieceValueApprox(a.captured) * 10 - pieceValueApprox(a.piece);
+        const bVal = pieceValueApprox(b.captured) * 10 - pieceValueApprox(b.piece);
+        return bVal - aVal;
+      });
+    } else {
+      movesToSearch = captureMoves.slice(0, 16);
+    }
+
+    for (let i = 0; i < movesToSearch.length; i++) {
       if (timeout && startTime && i % 5 === 0 && Date.now() - startTime >= timeout) return value;
 
-      const move = limited[i];
-      const next = state.clone();
-      applyMoveSearch(next, move, state.activeColor);
-      const score = -this.quiescence(next, -beta, -alpha, rootColor, evaluate(next, rootColor), timeout, startTime);
+      const move = movesToSearch[i];
 
-      if (score === null) return value;
+      // Delta pruning for Level 6: skip captures where captured piece + margin < alpha
+      if (level >= 6) {
+        const capturedValue = pieceValueApprox(move.captured);
+        if (standPat + capturedValue + 200 < alpha) {
+          continue; // This capture can't possibly raise the score enough
+        }
+      }
 
-      if (score > value) value = score;
-      if (value > alpha) alpha = value;
-      if (alpha >= beta) break;
+      // Use incremental make/undo for Level 6
+      if (level >= 6) {
+        state.makeMove(move);
+        const nextEval = evaluate(state, rootColor);
+        const score = -this.quiescence(state, -beta, -alpha, rootColor, nextEval, timeout, startTime, level);
+        state.undoMove();
+
+        if (score === null) return value;
+        if (score > value) value = score;
+        if (value > alpha) alpha = value;
+        if (alpha >= beta) break;
+      } else {
+        const next = state.clone();
+        applyMoveSearch(next, move, state.activeColor);
+        const score = -this.quiescence(next, -beta, -alpha, rootColor, evaluate(next, rootColor), timeout, startTime, level);
+
+        if (score === null) return value;
+        if (score > value) value = score;
+        if (value > alpha) alpha = value;
+        if (alpha >= beta) break;
+      }
     }
     return value;
   }
@@ -1098,8 +1262,6 @@ export class AI {
 
       if (move !== null) {
         bestMove = move;
-        // Update previous best score for next iteration's aspiration window
-        // We'll improve this later by actually tracking the best score
       }
     }
 

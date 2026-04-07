@@ -149,7 +149,7 @@ export class Controls {
     if (!(target instanceof HTMLButtonElement)) return;
 
     const level = Number(target.getAttribute("data-level"));
-    if (Number.isNaN(level) || level < 1 || level > 5) return;
+    if (Number.isNaN(level) || level < 1 || level > 6) return;
 
     this.selectedDifficulty = level;
 
@@ -182,12 +182,12 @@ export class Controls {
 
   getDifficulty() {
     const val = this.selectedDifficulty;
-    if (Number.isNaN(val) || val < 1 || val > 5) return 5;
+    if (Number.isNaN(val) || val < 1 || val > 6) return 5;
     return val;
   }
 
   setDifficulty(level) {
-    const clamped = Math.max(1, Math.min(5, Number(level) || 5));
+    const clamped = Math.max(1, Math.min(6, Number(level) || 5));
     this.selectedDifficulty = clamped;
     if (this.difficultyChoiceContainer) {
       const buttons = this.difficultyChoiceContainer.querySelectorAll("button");
