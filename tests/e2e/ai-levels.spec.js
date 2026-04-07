@@ -39,6 +39,7 @@ test.describe('AI Levels - Smoke Tests', () => {
             });
             await page.reload();
 
+            await page.locator('#color-choice button[data-color="white"]').click();
             // Set difficulty level
             await page.locator(`#difficulty-choice button[data-level="${level}"]`).click();
 
@@ -77,6 +78,7 @@ test.describe('AI Levels - Full Game Tests', () => {
             });
             await page.reload();
 
+            await page.locator('#color-choice button[data-color="white"]').click();
             // Set difficulty level
             await page.locator(`#difficulty-choice button[data-level="${level}"]`).click();
 

@@ -133,8 +133,11 @@ test.describe('LocalStorage: Game Progress', () => {
     test('saves game state to localStorage after starting a game', async ({ page }) => {
         await acceptedPage(page);
 
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        // Wait for game to initialise and at least one save
+        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.click('.chess-square[data-square="e2"]');
+        await page.click('.chess-square[data-square="e4"]');
         await page.waitForTimeout(500);
 
         const saved = await page.evaluate(() => localStorage.getItem('kpc-game'));
@@ -148,8 +151,11 @@ test.describe('LocalStorage: Game Progress', () => {
     test('restores saved game on reload', async ({ page }) => {
         await acceptedPage(page);
 
-        // Start a game
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
+        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.click('.chess-square[data-square="e2"]');
+        await page.click('.chess-square[data-square="e4"]');
         await page.waitForTimeout(600);
 
         // Reload and verify board is present
@@ -164,9 +170,15 @@ test.describe('LocalStorage: Game Progress', () => {
     test('New Game clears saved game from localStorage', async ({ page }) => {
         await acceptedPage(page);
 
-        // Start a game to populate storage
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
-        await page.waitForTimeout(500);
+        await page.waitForSelector('.chess-piece:has-text("♙")');
+        await page.click('.chess-square[data-square="e2"]');
+        await page.click('.chess-square[data-square="e4"]');
+        await page.waitForFunction(() => {
+            const t = document.querySelector('#status-text')?.textContent || '';
+            return t.includes('Your move');
+        }, { timeout: 30000 });
 
         // Start another new game — should clear and re-save
         await page.click('#new-game-btn');

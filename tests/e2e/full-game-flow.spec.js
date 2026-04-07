@@ -13,6 +13,7 @@ test.describe('Full Game Flow', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         // Set to Level 1 (very easy) to minimize AI thinking time
         await page.locator('#difficulty-choice button[data-level="1"]').click();
         // Set thinking time to minimum

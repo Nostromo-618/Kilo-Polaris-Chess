@@ -141,6 +141,7 @@ test.describe('Responsive Layout', () => {
         });
 
         test('game should be playable on mobile', async ({ page }) => {
+            await page.locator('#color-choice button[data-color="white"]').click();
             await page.click('#new-game-btn');
             await page.waitForSelector('.chess-piece:has-text("♙")');
 

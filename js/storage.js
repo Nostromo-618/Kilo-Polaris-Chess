@@ -10,6 +10,7 @@
  *   kpc-difficulty           "1" … "5"
  *   kpc-game                 JSON string of GameState.serialize()
  *   kpc-board-size           "0" … "100" desktop board width slider
+ *   kpc-color                "white" | "black" | "random"
  */
 
 const KEYS = {
@@ -19,6 +20,7 @@ const KEYS = {
   THINKING_TIME: 'kpc-thinking-time',
   GAME: 'kpc-game',
   BOARD_SIZE: 'kpc-board-size',
+  COLOR: 'kpc-color',
 };
 
 /**
@@ -89,6 +91,26 @@ export function setTheme(theme) {
   write(KEYS.THEME, safe);
   // Keep Vanduo's own key in sync so its theme customizer reads correctly
   write('vanduo-theme-preference', safe);
+}
+
+// ── Play color (white / black / random) ─────────────────────────────────────
+
+/**
+ * @returns {"white"|"black"|"random"|null}
+ */
+export function getColorChoice() {
+  const v = read(KEYS.COLOR);
+  if (v === 'white' || v === 'black' || v === 'random') return v;
+  return null;
+}
+
+/**
+ * @param {"white"|"black"|"random"} color
+ */
+export function setColorChoice(color) {
+  if (color === 'white' || color === 'black' || color === 'random') {
+    write(KEYS.COLOR, color);
+  }
 }
 
 // ── Difficulty ───────────────────────────────────────────────────────────────

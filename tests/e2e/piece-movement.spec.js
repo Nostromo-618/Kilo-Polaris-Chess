@@ -13,7 +13,8 @@ test.describe('Piece Movement', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
-        // Start a new game as white
+        await page.locator('#color-choice button[data-color="white"]').click();
+        // Start a new game as white (first move must be ours)
         await page.click('#new-game-btn');
         // Wait for game to initialize
         await page.waitForSelector('.chess-piece:has-text("♙")');

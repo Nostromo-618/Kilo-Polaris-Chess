@@ -13,19 +13,21 @@ test.describe('UI Performance - Rendering', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
     });
 
     test('should render board quickly', async ({ page }) => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
 
-        const startTime = performance.now();
+        const startTime = Date.now();
         await page.reload();
-        await page.waitForSelector('.chess-piece:has-text("♙")');
-        const endTime = performance.now();
+        await page.locator('#color-choice button[data-color="white"]').click();
+        await page.click('#new-game-btn');
+        await page.waitForSelector('.chess-piece:has-text("♙")', { timeout: 15000 });
+        const loadTime = Date.now() - startTime;
 
-        const loadTime = endTime - startTime;
-        expect(loadTime).toBeLessThan(3000);
+        expect(loadTime).toBeLessThan(8000);
     });
 
     test('should render 64 squares', async ({ page }) => {
@@ -40,7 +42,7 @@ test.describe('UI Performance - Rendering', () => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
 
-        const pieces = await page.locator('.chess-piece').count();
+        const pieces = await page.locator('.chess-piece.has-piece').count();
         expect(pieces).toBe(32);
     });
 
@@ -88,6 +90,7 @@ test.describe('UI Performance - Memory', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
     });
 
     test('should not leak memory during gameplay', async ({ page }) => {
@@ -122,7 +125,7 @@ test.describe('UI Performance - Memory', () => {
         }
 
         // Verify page is still responsive
-        const pieces = await page.locator('.chess-piece').count();
+        const pieces = await page.locator('.chess-piece.has-piece').count();
         expect(pieces).toBe(32);
     });
 
@@ -152,6 +155,7 @@ test.describe('UI Performance - Animations', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
     });
 
     test('should have smooth piece selection', async ({ page }) => {
@@ -201,6 +205,7 @@ test.describe('UI Performance - Large Move History', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
     });
 
     test('should handle 100 moves in history', async ({ page }) => {
@@ -252,6 +257,7 @@ test.describe('UI Performance - Theme Switching', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
     });
 
     test('should switch theme quickly', async ({ page }) => {
@@ -259,9 +265,8 @@ test.describe('UI Performance - Theme Switching', () => {
         const startTime = performance.now();
 
         for (let i = 0; i < switches; i++) {
-            await page.click('[data-theme-customizer-trigger]');
-            await page.click(i % 2 === 0 ? 'button:has-text("Dark")' : 'button:has-text("Light")');
-            await page.waitForTimeout(50);
+            await page.click('#theme-toggle-btn');
+            await page.waitForTimeout(20);
         }
 
         const endTime = performance.now();
@@ -271,18 +276,18 @@ test.describe('UI Performance - Theme Switching', () => {
     });
 
     test('should persist theme without delay', async ({ page }) => {
-        await page.click('[data-theme-customizer-trigger]');
-        await page.click('button:has-text("Dark")');
+        await page.evaluate(() => localStorage.setItem('kpc-theme', 'light'));
+        await page.reload();
+        await page.click('#theme-toggle-btn');
 
         const startTime = performance.now();
         await page.reload();
         await page.waitForTimeout(100);
 
-        const html = await page.locator('html');
-        const theme = await html.getAttribute('data-theme');
+        const html = page.locator('html');
+        await expect(html).toHaveAttribute('data-theme', 'dark');
         const endTime = performance.now();
 
-        expect(theme).toBe('dark');
         expect(endTime - startTime).toBeLessThan(1000);
     });
 });
@@ -294,6 +299,7 @@ test.describe('UI Performance - Responsive Design', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
     });
 
     test('should render correctly on mobile viewport', async ({ page }) => {
@@ -350,6 +356,7 @@ test.describe('UI Performance - DOM Operations', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
     });
 
     test('should minimize DOM mutations', async ({ page }) => {

@@ -235,7 +235,7 @@ function evaluatePawnStructure(pawnPositions, ownPawnFiles, enemyPawnFiles, enem
 
     // Passed pawn bonus (no enemy pawns ahead on same or adjacent files)
     if (isPassedPawn(file, rank, pawnColor, enemyPawnPositions)) {
-      const advancementRank = pawnColor === "white" ? rank : 7 - rank;
+      const advancementRank = pawnColor === "white" ? 7 - rank : rank;
       bonus += PASSED_PAWN_BONUS[advancementRank];
     }
   }

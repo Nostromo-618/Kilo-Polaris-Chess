@@ -13,6 +13,7 @@ test.describe('E2E Integration - Complete Game Flow', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
         await page.locator('#thinking-choice button[data-time="5"]').click();
     });
@@ -69,8 +70,8 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
 
-        // Verify game starts
-        const pieces = await page.locator('.chess-piece').count();
+        // Verify game starts (one piece div per square; only 32 have pieces)
+        const pieces = await page.locator('.chess-piece.has-piece').count();
         expect(pieces).toBe(32);
     });
 
@@ -178,6 +179,7 @@ test.describe('E2E Integration - Game Recovery', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
         await page.locator('#thinking-choice button[data-time="5"]').click();
     });
@@ -190,7 +192,7 @@ test.describe('E2E Integration - Game Recovery', () => {
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
 
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(800);
 
         // Check localStorage
         const saved = await page.evaluate(() => localStorage.getItem('kpc-game'));
@@ -282,32 +284,31 @@ test.describe('E2E Integration - Theme Persistence', () => {
     });
 
     test('should persist theme across reloads', async ({ page }) => {
-        // Switch to Dark theme
-        await page.click('[data-theme-customizer-trigger]');
-        await page.click('button:has-text("Dark")');
+        await page.evaluate(() => localStorage.setItem('kpc-theme', 'light'));
+        await page.reload();
+        await page.click('#theme-toggle-btn');
 
-        const html = await page.locator('html');
-        const themeBefore = await html.getAttribute('data-theme');
-        expect(themeBefore).toBe('dark');
+        const html = page.locator('html');
+        await expect(html).toHaveAttribute('data-theme', 'dark');
 
-        // Reload
         await page.reload();
         await page.waitForTimeout(300);
 
-        const themeAfter = await html.getAttribute('data-theme');
-        expect(themeAfter).toBe('dark');
+        await expect(html).toHaveAttribute('data-theme', 'dark');
     });
 
     test('should persist Light theme across reloads', async ({ page }) => {
-        await page.click('[data-theme-customizer-trigger]');
-        await page.click('button:has-text("Light")');
+        await page.evaluate(() => localStorage.setItem('kpc-theme', 'system'));
+        await page.reload();
+        await page.click('#theme-toggle-btn');
+
+        const html = page.locator('html');
+        await expect(html).toHaveAttribute('data-theme', 'light');
 
         await page.reload();
         await page.waitForTimeout(300);
 
-        const html = await page.locator('html');
-        const theme = await html.getAttribute('data-theme');
-        expect(theme).toBe('light');
+        await expect(html).toHaveAttribute('data-theme', 'light');
     });
 });
 
@@ -318,6 +319,7 @@ test.describe('E2E Integration - Concurrent Operations', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
         await page.locator('#thinking-choice button[data-time="5"]').click();
     });
@@ -344,8 +346,7 @@ test.describe('E2E Integration - Concurrent Operations', () => {
         }
 
         // Game should be initialized
-        const pieces = await page.locator('.chess-piece').count();
-        expect(pieces).toBe(32);
+        await expect(page.locator('.chess-piece.has-piece')).toHaveCount(32);
     });
 
     test('should handle difficulty change during game', async ({ page }) => {
@@ -380,6 +381,7 @@ test.describe('E2E Integration - Error Handling', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
     });
 
     test('should handle invalid move gracefully', async ({ page }) => {
@@ -437,6 +439,7 @@ test.describe('E2E Integration - Performance', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
         await page.locator('#thinking-choice button[data-time="5"]').click();
     });

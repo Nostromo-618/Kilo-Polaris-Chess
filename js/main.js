@@ -16,6 +16,7 @@ import {
   clearGame,
   getBoardSize,
   setBoardSize,
+  getColorChoice,
 } from "./storage.js";
 
 /**
@@ -412,6 +413,11 @@ function restorePreferences() {
   const savedThinkingTime = getThinkingTime();
   if (savedThinkingTime !== null) {
     controlsView.setThinkingTime(savedThinkingTime);
+  }
+
+  const savedColor = getColorChoice();
+  if (savedColor !== null) {
+    controlsView.setSelectedColor(savedColor);
   }
 }
 

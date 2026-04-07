@@ -1,4 +1,4 @@
-# Kilo Aurora Chess v2.0.4
+# Kilo Aurora Chess v2.0.5
 
 A pure client-side chess game that runs entirely in the browser. Play against a configurable AI with no server—ideal for static hosting (e.g. GitHub Pages).
 

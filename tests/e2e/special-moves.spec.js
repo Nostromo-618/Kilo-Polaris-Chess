@@ -13,6 +13,7 @@ test.describe('Special Moves', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
         await page.locator('#thinking-choice button[data-time="5"]').click();
     });
@@ -145,6 +146,8 @@ test.describe('Special Moves', () => {
         // Move pawn again to e5
         await makeMove(page, 'e4', 'e5');
         await waitForAIMove(page);
+
+        await page.locator('#board-container').scrollIntoViewIfNeeded();
 
         // Select e5 pawn and verify it shows highlight (proving selection works)
         await page.click('.chess-square[data-square="e5"]');

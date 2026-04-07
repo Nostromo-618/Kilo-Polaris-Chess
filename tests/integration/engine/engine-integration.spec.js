@@ -315,6 +315,7 @@ test.describe('Engine Integration - Move + Rules', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
     });
@@ -345,18 +346,14 @@ test.describe('Engine Integration - Move + Rules', () => {
             const { GameState } = await import('/js/engine/GameState.js');
             const { generateLegalMoves } = await import('/js/engine/Rules.js');
 
-            // Create position with promotion possibility
+            // wP on a7 → can promote to a8; kings placed for a legal position
+            const promotionBoard = new Array(64).fill(null);
+            promotionBoard[4] = 'wK';
+            promotionBoard[48] = 'wP';
+            promotionBoard[60] = 'bK';
+
             const promotionState = {
-                board: [
-                    null, null, null, null, null, null, null, null,
-                    'wP', null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, 'bK',
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, 'wK', null, null, null
-                ],
+                board: promotionBoard,
                 activeColor: 'white',
                 castlingRights: {
                     white: { kingSide: false, queenSide: false },
@@ -423,24 +420,21 @@ test.describe('Engine Integration - Move + Rules', () => {
             const { GameState } = await import('/js/engine/GameState.js');
             const { generateLegalMoves } = await import('/js/engine/Rules.js');
 
-            // Create position with en passant possibility
+            // White wP on e5, black bP on d5; ep capture lands on d6
+            const epBoard = new Array(64).fill(null);
+            epBoard[4] = 'wK';
+            epBoard[60] = 'bK';
+            epBoard[35] = 'bP';
+            epBoard[36] = 'wP';
+
             const enPassantState = {
-                board: [
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    'bP', 'wP', null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, 'wK', null, null, null
-                ],
+                board: epBoard,
                 activeColor: 'white',
                 castlingRights: {
                     white: { kingSide: false, queenSide: false },
                     black: { kingSide: false, queenSide: false }
                 },
-                enPassantTarget: 'b6',
+                enPassantTarget: 'd6',
                 halfmoveClock: 0,
                 fullmoveNumber: 10
             };
@@ -465,6 +459,7 @@ test.describe('Engine Integration - Full Game Flow', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
     });
@@ -472,7 +467,7 @@ test.describe('Engine Integration - Full Game Flow', () => {
     test('should play complete game with engine', async ({ page }) => {
         const result = await page.evaluate(async () => {
             const { GameState } = await import('/js/engine/GameState.js');
-            const { generateLegalMoves, isInCheck, isCheckmate, isStalemate } = await import('/js/engine/Rules.js');
+            const { generateLegalMoves, isInCheck, analyzePosition } = await import('/js/engine/Rules.js');
             const { AI } = await import('/js/engine/AI.js');
 
             const state = GameState.createStarting('white');
@@ -482,8 +477,8 @@ test.describe('Engine Integration - Full Game Flow', () => {
             const maxMoves = 20; // Limit to prevent infinite loops
 
             while (moveCount < maxMoves) {
-                // Check for game end
-                if (isCheckmate(state.asRulesState()) || isStalemate(state.asRulesState())) {
+                const ap = analyzePosition(state.asRulesState());
+                if (!ap.hasLegalMoves) {
                     break;
                 }
 

@@ -29,26 +29,25 @@ test.describe('UI Controls', () => {
         });
 
         test('should switch to Light theme via customizer', async ({ page }) => {
-            await page.click('[data-theme-customizer-trigger]');
-            await page.click('button:has-text("Light")');
-            
+            await page.evaluate(() => localStorage.setItem('kpc-theme', 'system'));
+            await page.reload();
+            await page.click('#theme-toggle-btn');
             const html = page.locator('html');
             await expect(html).toHaveAttribute('data-theme', 'light');
         });
 
         test('should switch to Dark theme via customizer', async ({ page }) => {
-            await page.click('[data-theme-customizer-trigger]');
-            await page.click('button:has-text("Dark")');
-            
+            await page.evaluate(() => localStorage.setItem('kpc-theme', 'light'));
+            await page.reload();
+            await page.click('#theme-toggle-btn');
             const html = page.locator('html');
             await expect(html).toHaveAttribute('data-theme', 'dark');
         });
 
         test('should switch to System theme via customizer', async ({ page }) => {
-            await page.click('[data-theme-customizer-trigger]');
-            await page.click('button:has-text("System")');
-            
-            // Should not have data-theme attribute when system is selected
+            await page.evaluate(() => localStorage.setItem('kpc-theme', 'dark'));
+            await page.reload();
+            await page.click('#theme-toggle-btn');
             const html = page.locator('html');
             await expect(html).not.toHaveAttribute('data-theme');
         });

@@ -10,6 +10,8 @@
  * Provides getters for current settings and notifies when a new game is requested.
  */
 
+import { getColorChoice, setColorChoice } from "../storage.js";
+
 export class Controls {
 /**
     * @param {Object} options
@@ -82,6 +84,10 @@ export class Controls {
       });
     }
 
+    const savedColor = getColorChoice();
+    if (savedColor) {
+      this.setSelectedColor(savedColor);
+    }
   }
 
   syncDifficultyButtons() {
@@ -125,6 +131,7 @@ export class Controls {
     if (!color || !["white", "black", "random"].includes(color)) return;
 
     this.selectedColor = color;
+    setColorChoice(color);
 
     const buttons = this.colorChoiceContainer.querySelectorAll("button");
     buttons.forEach((btn) => {

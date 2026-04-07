@@ -13,6 +13,7 @@ test.describe('UI Integration - BoardView + Game State', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
     });
@@ -296,33 +297,27 @@ test.describe('UI Integration - Theme Switching', () => {
     });
 
     test('should switch to Light theme', async ({ page }) => {
-        await page.click('[data-theme-customizer-trigger]');
-        await page.click('button:has-text("Light")');
-
-        const html = await page.locator('html');
-        const theme = await html.getAttribute('data-theme');
-
-        expect(theme).toBe('light');
+        await page.evaluate(() => localStorage.setItem('kpc-theme', 'system'));
+        await page.reload();
+        await page.click('#theme-toggle-btn');
+        const html = page.locator('html');
+        await expect(html).toHaveAttribute('data-theme', 'light');
     });
 
     test('should switch to Dark theme', async ({ page }) => {
-        await page.click('[data-theme-customizer-trigger]');
-        await page.click('button:has-text("Dark")');
-
-        const html = await page.locator('html');
-        const theme = await html.getAttribute('data-theme');
-
-        expect(theme).toBe('dark');
+        await page.evaluate(() => localStorage.setItem('kpc-theme', 'light'));
+        await page.reload();
+        await page.click('#theme-toggle-btn');
+        const html = page.locator('html');
+        await expect(html).toHaveAttribute('data-theme', 'dark');
     });
 
     test('should switch to System theme', async ({ page }) => {
-        await page.click('[data-theme-customizer-trigger]');
-        await page.click('button:has-text("System")');
-
-        const html = await page.locator('html');
-        const theme = await html.getAttribute('data-theme');
-
-        expect(theme).toBeNull();
+        await page.evaluate(() => localStorage.setItem('kpc-theme', 'dark'));
+        await page.reload();
+        await page.click('#theme-toggle-btn');
+        const html = page.locator('html');
+        await expect(html).not.toHaveAttribute('data-theme');
     });
 });
 
@@ -333,6 +328,7 @@ test.describe('UI Integration - Game End Modal', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
     });
@@ -359,6 +355,7 @@ test.describe('UI Integration - Status Display', () => {
             localStorage.setItem('kpc-disclaimer-accepted', 'true');
         });
         await page.reload();
+        await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece:has-text("♙")');
     });
