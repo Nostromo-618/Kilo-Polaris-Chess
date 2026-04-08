@@ -164,7 +164,7 @@ async function restoreGame(savedState) {
 
   try {
     game = Game.fromSaved(savedState, {
-      difficulty: savedDifficulty || 5,
+      difficulty: savedDifficulty || 6,
       onUpdate: syncUIWithGame,
     });
 

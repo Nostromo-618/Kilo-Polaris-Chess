@@ -38,7 +38,7 @@ export class Controls {
     this.onNewGameRequested = onNewGameRequested || (() => { });
 
     this.selectedColor = "random";
-    this.selectedDifficulty = 5;
+    this.selectedDifficulty = 6;
     this.selectedThinkingTime = 30;
 
     this.handleColorClick = this.handleColorClick.bind(this);
@@ -79,7 +79,7 @@ export class Controls {
 
     if (this.difficultySelect) {
       this.difficultySelect.addEventListener("change", () => {
-        this.selectedDifficulty = Number(this.difficultySelect.value) || 5;
+        this.selectedDifficulty = Number(this.difficultySelect.value) || 6;
         this.syncDifficultyButtons();
       });
     }
@@ -182,12 +182,12 @@ export class Controls {
 
   getDifficulty() {
     const val = this.selectedDifficulty;
-    if (Number.isNaN(val) || val < 1 || val > 6) return 5;
+    if (Number.isNaN(val) || val < 1 || val > 6) return 6;
     return val;
   }
 
   setDifficulty(level) {
-    const clamped = Math.max(1, Math.min(6, Number(level) || 5));
+    const clamped = Math.max(1, Math.min(6, Number(level) || 6));
     this.selectedDifficulty = clamped;
     if (this.difficultyChoiceContainer) {
       const buttons = this.difficultyChoiceContainer.querySelectorAll("button");

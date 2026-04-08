@@ -116,21 +116,21 @@ export function setColorChoice(color) {
 // ── Difficulty ───────────────────────────────────────────────────────────────
 
 /**
- * @returns {number|null} 1-5, or null if not set
+ * @returns {number|null} 1-6, or null if not set
  */
 export function getDifficulty() {
   const raw = read(KEYS.DIFFICULTY);
   if (raw === null) return null;
   const n = Number(raw);
-  if (Number.isNaN(n) || n < 1 || n > 5) return null;
+  if (Number.isNaN(n) || n < 1 || n > 6) return null;
   return n;
 }
 
 /**
- * @param {number} level 1-5
+ * @param {number} level 1-6
  */
 export function setDifficulty(level) {
-  const clamped = Math.max(1, Math.min(5, Number(level) || 5));
+  const clamped = Math.max(1, Math.min(6, Number(level) || 6));
   write(KEYS.DIFFICULTY, String(clamped));
 }
 

@@ -43,7 +43,7 @@ test.describe('Security - Input Validation', () => {
         );
         expect(level).toBeTruthy();
         expect(Number(level)).toBeGreaterThanOrEqual(1);
-        expect(Number(level)).toBeLessThanOrEqual(5);
+        expect(Number(level)).toBeLessThanOrEqual(6);
     });
 
     test('should validate thinking time from storage', async ({ page }) => {

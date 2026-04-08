@@ -89,7 +89,7 @@ export class Game {
 
     this.state = GameState.createStarting(resolvedPlayerColor);
 
-    this.setDifficulty(difficulty || 5);
+    this.setDifficulty(difficulty || 6);
     this.notify();
   }
 
@@ -104,7 +104,7 @@ export class Game {
     instance.ai = new AI();
     instance.onUpdate = onUpdate || (() => { });
     instance.state = new GameState(serialized);
-    instance.setDifficulty(difficulty || serialized.difficulty || 5);
+    instance.setDifficulty(difficulty || serialized.difficulty || 6);
     // Re-compute status text so UI shows correct message
     instance.state.updateStatusText();
     instance.notify();
@@ -116,7 +116,7 @@ export class Game {
    * @param {number} level 1..6
    */
   setDifficulty(level) {
-    const clamped = Math.max(1, Math.min(6, Number(level) || 5));
+    const clamped = Math.max(1, Math.min(6, Number(level) || 6));
     this.difficulty = clamped;
   }
 
