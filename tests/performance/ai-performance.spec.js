@@ -352,8 +352,6 @@ test.describe('AI Performance - Search Quality', () => {
     test('should prefer captures when available', async ({ page }) => {
         const result = await page.evaluate(async () => {
             const { AI } = await import('/js/engine/AI.js');
-            const { GameState } = await import('/js/engine/GameState.js');
-            const { generateLegalMoves } = await import('/js/engine/Rules.js');
 
             // wP on d4 captures bP on e5; wK on e1 (index 4, 27, 36)
             const b = new Array(64).fill(null);
@@ -373,7 +371,8 @@ test.describe('AI Performance - Search Quality', () => {
             };
 
             const ai = new AI();
-            const move = await ai.findBestMove(captureState, { level: 3, forColor: 'white', timeout: 2000 });
+            // Level 6 has zero randomness so the winning capture is deterministic
+            const move = await ai.findBestMove(captureState, { level: 6, forColor: 'white', timeout: 10000 });
 
             return {
                 isCapture: move != null && move.captured != null && move.captured !== '',

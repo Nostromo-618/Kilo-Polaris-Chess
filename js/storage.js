@@ -7,7 +7,7 @@
  * Keys:
  *   kpc-disclaimer-accepted  "true" when user has accepted the disclaimer
  *   kpc-theme                "system" | "light" | "dark"
- *   kpc-difficulty           "1" … "5"
+ *   kpc-difficulty           "1" … "6"
  *   kpc-game                 JSON string of GameState.serialize()
  *   kpc-board-size           "0" … "100" desktop board width slider
  *   kpc-color                "white" | "black" | "random"

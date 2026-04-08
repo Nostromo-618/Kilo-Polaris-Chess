@@ -149,16 +149,20 @@ test.describe('Special Moves', () => {
 
         await page.locator('#board-container').scrollIntoViewIfNeeded();
 
-        // Select e5 pawn and verify it shows highlight (proving selection works)
-        await page.click('.chess-square[data-square="e5"]');
+        await page.waitForFunction(() => {
+            const t = document.querySelector('#status-text')?.textContent || '';
+            return t.includes('Your move');
+        }, { timeout: 15000 });
 
-        // The e5 square should be selected
-        const e5Square = page.locator('.chess-square[data-square="e5"]');
-        await expect(e5Square).toHaveClass(/highlight-selected/);
+        const e5 = page.locator('.chess-square[data-square="e5"]');
+        await expect(e5.locator('.chess-piece[data-piece="wP"]')).toBeVisible({ timeout: 20000 });
+        await e5.scrollIntoViewIfNeeded();
 
-        // Verify at least one legal move is highlighted
-        // (we can't predict which squares due to AI randomness)
+        // Select e5 pawn — legal-move highlights prove selection (mobile may keep last-move highlight on the square)
+        await e5.click({ force: true });
+
         const legalMoves = page.locator('.chess-square.highlight-legal');
+        await expect(legalMoves.first()).toBeVisible({ timeout: 20000 });
         const legalCount = await legalMoves.count();
         expect(legalCount).toBeGreaterThan(0);
     });

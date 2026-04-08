@@ -54,19 +54,20 @@ test.describe('UI Controls', () => {
     });
 
     test.describe('Difficulty Selection', () => {
-        test('should have all 5 difficulty levels', async ({ page }) => {
+        test('should have all 6 difficulty levels', async ({ page }) => {
             const buttons = page.locator('#difficulty-choice button[data-level]');
-            await expect(buttons).toHaveCount(5);
+            await expect(buttons).toHaveCount(6);
         });
 
         test('should display descriptive difficulty names', async ({ page }) => {
             await expect(page.locator('#difficulty-choice button[data-level="1"]')).toHaveAttribute('title', 'Very Easy');
             await expect(page.locator('#difficulty-choice button[data-level="3"]')).toHaveAttribute('title', 'Medium');
             await expect(page.locator('#difficulty-choice button[data-level="5"]')).toHaveAttribute('title', 'Very Hard');
+            await expect(page.locator('#difficulty-choice button[data-level="6"]')).toHaveAttribute('title', 'Expert');
         });
 
         test('should allow changing difficulty', async ({ page }) => {
-            for (const level of ['1', '2', '3', '4', '5']) {
+            for (const level of ['1', '2', '3', '4', '5', '6']) {
                 await page.locator(`#difficulty-choice button[data-level="${level}"]`).click();
                 await expect(page.locator(`#difficulty-choice button[data-level="${level}"]`)).toHaveClass(/vd-is-active/);
             }

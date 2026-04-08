@@ -72,7 +72,7 @@ export class Game {
   /**
    * @param {Object} options
    * @param {"white"|"black"|"random"} options.playerColor
-   * @param {number} options.difficulty - 1..5
+   * @param {number} options.difficulty - 1..6
    * @param {(snapshot: import("./engine/GameState.js").GameSnapshot) => void} options.onUpdate
    */
   constructor({ playerColor, difficulty, onUpdate }) {
@@ -113,7 +113,7 @@ export class Game {
 
   /**
    * Update AI difficulty.
-   * @param {number} level 1..5
+   * @param {number} level 1..6
    */
   setDifficulty(level) {
     const clamped = Math.max(1, Math.min(6, Number(level) || 5));

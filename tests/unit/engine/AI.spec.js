@@ -363,13 +363,15 @@ test.describe('AI - Search Algorithms', () => {
             return {
                 level1Depth: depthForLevel[1],
                 level3Depth: depthForLevel[3],
-                level5Depth: depthForLevel[5]
+                level5Depth: depthForLevel[5],
+                level6Depth: depthForLevel[6],
             };
         });
 
         expect(result.level1Depth).toBe(1);
         expect(result.level3Depth).toBe(3);
         expect(result.level5Depth).toBe(5);
+        expect(result.level6Depth).toBe(7);
     });
 
     test('should handle timeout during search', async ({ page }) => {
@@ -412,13 +414,15 @@ test.describe('AI - Difficulty Levels', () => {
             return {
                 level1Randomness: ai.randomness[1],
                 level3Randomness: ai.randomness[3],
-                level5Randomness: ai.randomness[5]
+                level5Randomness: ai.randomness[5],
+                level6Randomness: ai.randomness[6],
             };
         });
 
         expect(result.level1Randomness).toBe(0.35);
         expect(result.level3Randomness).toBe(0.10);
         expect(result.level5Randomness).toBe(0.03);
+        expect(result.level6Randomness).toBe(0);
     });
 
     test('should select best move at level 1 with randomness', async ({ page }) => {

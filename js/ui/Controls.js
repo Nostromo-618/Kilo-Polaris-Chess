@@ -3,7 +3,7 @@
  *
  * Handles:
  * - Color selection (white / black / random)
- * - Difficulty selection (1-5)
+ * - Difficulty selection (1-6)
  * - Thinking time (5s / 10s / 20s / 30s / 60s)
  * - New game button
  *

@@ -388,65 +388,16 @@ test.describe('Evaluator - Piece-Square Tables', () => {
 
     test('should prefer king safety in middlegame', async ({ page }) => {
         const result = await page.evaluate(async () => {
-            const flatDiagramToBoard = (flat64) => {
-                const b = new Array(64).fill(null);
-                for (let diagramRow = 0; diagramRow < 8; diagramRow++) {
-                    const rank = 8 - diagramRow;
-                    for (let file = 0; file < 8; file++) {
-                        const piece = flat64[diagramRow * 8 + file];
-                        const idx = (rank - 1) * 8 + file;
-                        if (piece) b[idx] = piece;
-                    }
-                }
-                return b;
-            };
-
-
+            const { GameState } = await import('/js/engine/GameState.js');
             const { evaluate } = await import('/js/engine/Evaluator.js');
 
-            // King castled (g1)
-            const safeKing = {
-                board: flatDiagramToBoard([
-                    null, null, null, null, null, null, null, 'bK',
-                    null, null, null, null, null, 'bP', 'bP', 'bP',
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, 'wP', 'wP', 'wP',
-                    null, null, null, null, null, null, 'wK', null
-                ]),
-                activeColor: 'white',
-                castlingRights: {
-                    white: { kingSide: false, queenSide: false },
-                    black: { kingSide: false, queenSide: false }
-                },
-                enPassantTarget: null,
-                halfmoveClock: 0,
-                fullmoveNumber: 1
-            };
+            // Full starting position (middlegame phase). Same material as default: king on g1 with N on f3 (post-castling pattern) vs king on e1.
+            const safeKing = GameState.createStarting('white');
+            safeKing.board[4] = null;
+            safeKing.board[6] = 'wK';
+            safeKing.board[21] = 'wN'; // f3 — knight displaced from g1
 
-            // King in center (e1)
-            const exposedKing = {
-                board: flatDiagramToBoard([
-                    null, null, null, null, null, null, null, 'bK',
-                    null, null, null, null, null, 'bP', 'bP', 'bP',
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, 'wP', 'wP', 'wP',
-                    null, null, null, null, 'wK', null, null, null
-                ]),
-                activeColor: 'white',
-                castlingRights: {
-                    white: { kingSide: false, queenSide: false },
-                    black: { kingSide: false, queenSide: false }
-                },
-                enPassantTarget: null,
-                halfmoveClock: 0,
-                fullmoveNumber: 1
-            };
+            const exposedKing = GameState.createStarting('white');
 
             const safeScore = evaluate(safeKing, 'white');
             const exposedScore = evaluate(exposedKing, 'white');
@@ -454,7 +405,7 @@ test.describe('Evaluator - Piece-Square Tables', () => {
             return { safeScore, exposedScore };
         });
 
-        // Castled king should be valued higher (safer)
+        // Castled king on g1 should score higher than king on e1 (castling bonus + structure)
         expect(result.safeScore).toBeGreaterThan(result.exposedScore);
     });
 });

@@ -15,7 +15,7 @@ async function makeMove(page, from, to) {
 }
 
 // Helper: wait for AI to complete its move
-async function waitForAIMove(page) {
+async function waitForAIMove(page, timeoutMs = 30000) {
     await page.waitForFunction(() => {
         const status = document.querySelector('#status-text');
         if (!status) return false;
@@ -24,15 +24,18 @@ async function waitForAIMove(page) {
             text.includes('Checkmate') ||
             text.includes('Stalemate') ||
             text.includes('Draw');
-    }, { timeout: 30000 });
+    }, { timeout: timeoutMs });
 }
 
 test.describe('AI Levels - Smoke Tests', () => {
     test.describe.configure({ mode: 'parallel' });
 
     // Quick test: verify each level can complete at least one move
-    for (const level of [1, 2, 3, 4, 5]) {
+    for (const level of [1, 2, 3, 4, 5, 6]) {
         test(`Level ${level} should complete AI move`, async ({ page }) => {
+            if (level === 6) {
+                test.setTimeout(120000);
+            }
             await page.goto('/');
             await page.evaluate(() => {
                 localStorage.setItem('kpc-disclaimer-accepted', 'true');
@@ -50,8 +53,8 @@ test.describe('AI Levels - Smoke Tests', () => {
             // Make player move: e4
             await makeMove(page, 'e2', 'e4');
 
-            // Wait for AI response
-            await waitForAIMove(page);
+            // Wait for AI response (level 6 search is deeper)
+            await waitForAIMove(page, level === 6 ? 90000 : 30000);
 
             // Verify AI made a move (move history should have 2 moves)
             const historyItems = page.locator('#move-history li');
@@ -68,9 +71,12 @@ test.describe('AI Levels - Smoke Tests', () => {
 test.describe('AI Levels - Full Game Tests', () => {
     test.describe.configure({ mode: 'serial' }); // Run serially to avoid resource contention
 
-    for (const level of [1, 2, 3, 4, 5]) {
+    for (const level of [1, 2, 3, 4, 5, 6]) {
         test(`Level ${level} should play multiple moves without errors`, async ({ page }) => {
             test.slow(); // Mark as slow test
+            if (level === 6) {
+                test.setTimeout(180000);
+            }
 
             await page.goto('/');
             await page.evaluate(() => {
@@ -117,7 +123,7 @@ test.describe('AI Levels - Full Game Tests', () => {
                     const pieceOnSquare = await page.locator(`.chess-square[data-square="${from}"] .chess-piece`).count();
                     if (pieceOnSquare > 0) {
                         await makeMove(page, from, to);
-                        await waitForAIMove(page);
+                        await waitForAIMove(page, level === 6 ? 90000 : 30000);
                     }
                 } catch {
                     // Move failed, continue with next

@@ -412,7 +412,7 @@ test.describe('Accessibility - Semantic HTML', () => {
     test('should use button group for difficulty', async ({ page }) => {
         const group = page.locator('#difficulty-choice');
         await expect(group).toBeVisible();
-        await expect(group.locator('button[data-level]')).toHaveCount(5);
+        await expect(group.locator('button[data-level]')).toHaveCount(6);
     });
 
     test('should use list for move history', async ({ page }) => {
