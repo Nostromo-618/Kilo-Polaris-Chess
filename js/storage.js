@@ -11,6 +11,7 @@
  *   kpc-game                 JSON string of GameState.serialize()
  *   kpc-board-size           "0" … "100" desktop board width slider
  *   kpc-color                "white" | "black" | "random"
+ *   kpc-engine               "builtin" | "tomitank"
  */
 
 const KEYS = {
@@ -21,6 +22,7 @@ const KEYS = {
   GAME: 'kpc-game',
   BOARD_SIZE: 'kpc-board-size',
   COLOR: 'kpc-color',
+  ENGINE: 'kpc-engine',
 };
 
 /**
@@ -110,6 +112,26 @@ export function getColorChoice() {
 export function setColorChoice(color) {
   if (color === 'white' || color === 'black' || color === 'random') {
     write(KEYS.COLOR, color);
+  }
+}
+
+// ── Engine (built-in vs TomitankChess) ───────────────────────────────────────
+
+/**
+ * @returns {"builtin"|"tomitank"|null}
+ */
+export function getEngine() {
+  const v = read(KEYS.ENGINE);
+  if (v === 'builtin' || v === 'tomitank') return v;
+  return null;
+}
+
+/**
+ * @param {"builtin"|"tomitank"} engine
+ */
+export function setEngine(engine) {
+  if (engine === 'builtin' || engine === 'tomitank') {
+    write(KEYS.ENGINE, engine);
   }
 }
 

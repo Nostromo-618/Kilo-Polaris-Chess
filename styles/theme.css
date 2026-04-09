@@ -266,16 +266,29 @@
 
 /* ============================================
    DISCLAIMER MODAL
+   Landscape-oriented dialog: width ÷ height ≈ 1.618 (φ), up to 85vw / 85vh.
    ============================================ */
 
+#disclaimer-modal .disclaimer-modal-dialog,
 .disclaimer-modal-dialog {
-  max-width: 520px;
-  margin: auto;
+  --disclaimer-modal-w: min(85vw, 1200px);
+  width: var(--disclaimer-modal-w);
+  max-width: 85vw;
+  /* Golden ratio: width / height ≈ 1.618 → cap height; never exceed 85vh */
+  max-height: min(85vh, calc(var(--disclaimer-modal-w) / 1.618));
+  margin: clamp(0.5rem, 2vh, 1.25rem) auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .disclaimer-modal-content {
   border-radius: var(--radius-xl);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  max-height: inherit;
 }
 
 .disclaimer-modal-header {
@@ -286,6 +299,7 @@
   padding: var(--spacing-21, 21px) var(--spacing-21, 21px) var(--spacing-13, 13px);
   background: linear-gradient(135deg, var(--primary-6) 0%, var(--primary-4) 100%);
   border-bottom: none;
+  flex-shrink: 0;
 }
 
 .disclaimer-modal-icon {
@@ -306,6 +320,11 @@
 
 .disclaimer-modal-body {
   padding: var(--spacing-21, 21px);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .disclaimer-modal-body > p {
@@ -335,11 +354,28 @@
   line-height: 1.5;
 }
 
+.disclaimer-li-body {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .disclaimer-list li i {
   color: var(--primary-6);
   font-size: 1.1rem;
   flex-shrink: 0;
   margin-top: 0.1em;
+}
+
+.disclaimer-inline-link {
+  color: var(--primary-6);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.disclaimer-inline-link:hover {
+  color: var(--primary-7);
 }
 
 .disclaimer-footnote {
@@ -352,6 +388,7 @@
   justify-content: center;
   padding: var(--spacing-13, 13px) var(--spacing-21, 21px) var(--spacing-21, 21px);
   border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .disclaimer-accept-btn {
@@ -368,13 +405,33 @@
   }
 }
 
+/* Mobile / narrow: nearly full-screen disclaimer (override Vanduo --modal-width ~377px) */
 @media (max-width: 576px) {
-  .disclaimer-modal-dialog {
-    margin: var(--spacing-13, 13px);
+  #disclaimer-modal .vd-modal-dialog.disclaimer-modal-dialog {
+    --disclaimer-modal-w: calc(100vw - 1rem);
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+    /* Fill most of the viewport; golden ratio is less important than readability */
+    max-height: min(94vh, 94dvh) !important;
+    margin: 0.375rem auto !important;
+  }
+
+  .disclaimer-modal-content {
+    max-height: min(94vh, 94dvh);
   }
 
   .disclaimer-accept-btn {
     min-width: unset;
     width: 100%;
+  }
+}
+
+/* Small tablets / large phones in portrait */
+@media (min-width: 577px) and (max-width: 767px) {
+  #disclaimer-modal .vd-modal-dialog.disclaimer-modal-dialog {
+    --disclaimer-modal-w: min(92vw, 1200px);
+    width: min(92vw, 1200px) !important;
+    max-width: min(92vw, 1200px) !important;
+    max-height: min(88vh, calc(var(--disclaimer-modal-w) / 1.618)) !important;
   }
 }

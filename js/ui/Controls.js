@@ -5,25 +5,28 @@
  * - Color selection (white / black / random)
  * - Difficulty selection (1-6)
  * - Thinking time (5s / 10s / 20s / 30s / 60s)
+ * - Engine (built-in Kilo Aurora vs TomitankChess)
  * - New game button
  *
  * Provides getters for current settings and notifies when a new game is requested.
  */
 
-import { getColorChoice, setColorChoice } from "../storage.js";
+import { getColorChoice, setColorChoice, getEngine, setEngine } from "../storage.js";
 
 export class Controls {
-/**
-    * @param {Object} options
-    * @param {HTMLElement} options.colorChoiceContainer
-    * @param {HTMLElement} options.difficultyChoiceContainer
-    * @param {HTMLElement} options.thinkingChoiceContainer
-    * @param {HTMLButtonElement} options.newGameButton
-    * @param {HTMLSelectElement} [options.difficultySelect]
-    * @param {() => void} options.onNewGameRequested
-    */
+  /**
+   * @param {Object} options
+   * @param {HTMLElement} options.colorChoiceContainer
+   * @param {HTMLElement} [options.engineChoiceContainer]
+   * @param {HTMLElement} options.difficultyChoiceContainer
+   * @param {HTMLElement} options.thinkingChoiceContainer
+   * @param {HTMLButtonElement} options.newGameButton
+   * @param {HTMLSelectElement} [options.difficultySelect]
+   * @param {() => void} options.onNewGameRequested
+   */
   constructor({
     colorChoiceContainer,
+    engineChoiceContainer,
     difficultyChoiceContainer,
     thinkingChoiceContainer,
     newGameButton,
@@ -31,6 +34,7 @@ export class Controls {
     onNewGameRequested,
   }) {
     this.colorChoiceContainer = colorChoiceContainer;
+    this.engineChoiceContainer = engineChoiceContainer || null;
     this.difficultyChoiceContainer = difficultyChoiceContainer;
     this.thinkingChoiceContainer = thinkingChoiceContainer;
     this.newGameButton = newGameButton;
@@ -38,10 +42,13 @@ export class Controls {
     this.onNewGameRequested = onNewGameRequested || (() => { });
 
     this.selectedColor = "random";
+    /** @type {"builtin"|"tomitank"} */
+    this.selectedEngine = "builtin";
     this.selectedDifficulty = 6;
     this.selectedThinkingTime = 30;
 
     this.handleColorClick = this.handleColorClick.bind(this);
+    this.handleEngineClick = this.handleEngineClick.bind(this);
     this.handleDifficultyClick = this.handleDifficultyClick.bind(this);
     this.handleThinkingClick = this.handleThinkingClick.bind(this);
     this.handleNewGameClick = this.handleNewGameClick.bind(this);
@@ -56,6 +63,15 @@ export class Controls {
       buttons.forEach(btn => {
         btn.setAttribute("aria-pressed", btn.classList.contains("vd-is-active") ? "true" : "false");
         btn.setAttribute("aria-selected", btn.classList.contains("vd-is-active") ? "true" : "false");
+      });
+    }
+
+    if (this.engineChoiceContainer) {
+      this.engineChoiceContainer.addEventListener("click", this.handleEngineClick);
+      this.engineChoiceContainer.querySelectorAll("button").forEach((btn) => {
+        const active = btn.classList.contains("vd-is-active");
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+        btn.setAttribute("aria-selected", active ? "true" : "false");
       });
     }
 
@@ -87,6 +103,32 @@ export class Controls {
     const savedColor = getColorChoice();
     if (savedColor) {
       this.setSelectedColor(savedColor);
+    }
+
+    const savedEngine = getEngine();
+    if (savedEngine) {
+      this.setSelectedEngine(savedEngine);
+    }
+  }
+
+  handleEngineClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+
+    const engine = target.getAttribute("data-engine");
+    if (engine !== "builtin" && engine !== "tomitank") return;
+
+    this.selectedEngine = engine;
+    setEngine(engine);
+
+    if (this.engineChoiceContainer) {
+      const buttons = this.engineChoiceContainer.querySelectorAll("button");
+      buttons.forEach((btn) => {
+        const active = btn.getAttribute("data-engine") === engine;
+        btn.classList.toggle("vd-is-active", active);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+        btn.setAttribute("aria-selected", active ? "true" : "false");
+      });
     }
   }
 
@@ -184,6 +226,30 @@ export class Controls {
     const val = this.selectedDifficulty;
     if (Number.isNaN(val) || val < 1 || val > 6) return 6;
     return val;
+  }
+
+  /**
+   * @returns {"builtin"|"tomitank"}
+   */
+  getEngine() {
+    return this.selectedEngine === "tomitank" ? "tomitank" : "builtin";
+  }
+
+  /**
+   * @param {"builtin"|"tomitank"} engine
+   */
+  setSelectedEngine(engine) {
+    if (engine !== "builtin" && engine !== "tomitank") return;
+    this.selectedEngine = engine;
+    if (this.engineChoiceContainer) {
+      const buttons = this.engineChoiceContainer.querySelectorAll("button");
+      buttons.forEach((btn) => {
+        const active = btn.getAttribute("data-engine") === engine;
+        btn.classList.toggle("vd-is-active", active);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+        btn.setAttribute("aria-selected", active ? "true" : "false");
+      });
+    }
   }
 
   setDifficulty(level) {

@@ -1,6 +1,7 @@
 import { GameState } from "./engine/GameState.js";
 import { AI } from "./engine/AI.js";
 import { generateLegalMoves, getCheckedKingSquare as kingSquareIfInCheck } from "./engine/Rules.js";
+import { getTomitankClient } from "./tomitankClient.js";
 
 /**
  * Game.js
@@ -73,9 +74,10 @@ export class Game {
    * @param {Object} options
    * @param {"white"|"black"|"random"} options.playerColor
    * @param {number} options.difficulty - 1..6
+   * @param {"builtin"|"tomitank"} [options.engine]
    * @param {(snapshot: import("./engine/GameState.js").GameSnapshot) => void} options.onUpdate
    */
-  constructor({ playerColor, difficulty, onUpdate }) {
+  constructor({ playerColor, difficulty, onUpdate, engine = "builtin" }) {
     // Fallback AI for when worker is not available
     this.ai = new AI();
     this.onUpdate = onUpdate || (() => { });
@@ -90,21 +92,24 @@ export class Game {
     this.state = GameState.createStarting(resolvedPlayerColor);
 
     this.setDifficulty(difficulty || 6);
+    /** @type {"builtin"|"tomitank"} */
+    this.engine = engine === "tomitank" ? "tomitank" : "builtin";
     this.notify();
   }
 
   /**
    * Restore a game from previously serialized state (e.g. localStorage).
    * @param {Object} serialized - return value of GameState.serialize()
-   * @param {{ difficulty?: number, onUpdate?: Function }} options
+   * @param {{ difficulty?: number, onUpdate?: Function, engine?: "builtin"|"tomitank" }} options
    * @returns {Game}
    */
-  static fromSaved(serialized, { difficulty, onUpdate } = {}) {
+  static fromSaved(serialized, { difficulty, onUpdate, engine = "builtin" } = {}) {
     const instance = Object.create(Game.prototype);
     instance.ai = new AI();
     instance.onUpdate = onUpdate || (() => { });
     instance.state = new GameState(serialized);
     instance.setDifficulty(difficulty || serialized.difficulty || 6);
+    instance.engine = engine === "tomitank" ? "tomitank" : "builtin";
     // Re-compute status text so UI shows correct message
     instance.state.updateStatusText();
     instance.notify();
@@ -269,6 +274,24 @@ export class Game {
   async computeAIMove(timeout = 10000) {
     if (this.isGameOver()) return null;
     const aiColor = this.getCurrentTurn();
+
+    if (this.engine === "tomitank") {
+      try {
+        const client = getTomitankClient();
+        const move = await client.findBestMove(this.state, {
+          movetime: timeout,
+          difficulty: this.difficulty,
+        });
+        if (move) return move;
+      } catch (e) {
+        console.warn("TomitankChess failed, falling back to built-in AI:", e);
+      }
+      return this.ai.findBestMove(this.state, {
+        level: this.difficulty,
+        forColor: aiColor,
+        timeout: timeout,
+      });
+    }
 
     // Try to use Web Worker for non-blocking computation
     if (aiWorker && workerReady) {

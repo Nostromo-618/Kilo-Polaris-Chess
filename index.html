@@ -31,6 +31,24 @@
         </h1>
         <div class="header-right-section">
           <div class="header-controls vd-d-flex items-center vd-gap-4">
+            <button
+              type="button"
+              id="disclaimer-info-btn"
+              class="vd-theme-customizer-trigger"
+              aria-label="About this app and terms"
+            >
+              <i class="ph-duotone ph-info" aria-hidden="true"></i>
+            </button>
+            <a
+              id="github-repo-link"
+              class="vd-theme-customizer-trigger"
+              href="https://github.com/Nostromo-618/kilo-aurora-chess"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View source on GitHub"
+            >
+              <i class="ph-duotone ph-github-logo" aria-hidden="true"></i>
+            </a>
             <button id="theme-toggle-btn" class="vd-theme-customizer-trigger" aria-label="Toggle theme">
               <i class="ph-duotone ph-desktop"></i>
             </button>
@@ -63,6 +81,30 @@
                   <button data-color="white" class="vd-btn vd-btn-outline vd-btn-sm">White</button>
                   <button data-color="black" class="vd-btn vd-btn-outline vd-btn-sm">Black</button>
                   <button data-color="random" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">Random</button>
+                </div>
+              </div>
+
+              <div class="vd-form-group">
+                <div class="vd-form-label" id="engine-label">Computer engine:</div>
+                <div class="vd-btn-group" id="engine-choice" role="group" aria-labelledby="engine-label">
+                  <button
+                    type="button"
+                    data-engine="builtin"
+                    class="vd-btn vd-btn-outline vd-btn-sm vd-is-active"
+                    data-tooltip="Beginner Friendly"
+                    data-tooltip-placement="bottom"
+                  >
+                    Kilo Aurora
+                  </button>
+                  <button
+                    type="button"
+                    data-engine="tomitank"
+                    class="vd-btn vd-btn-outline vd-btn-sm"
+                    data-tooltip="For Experienced Player"
+                    data-tooltip-placement="bottom"
+                  >
+                    TomitankChess
+                  </button>
                 </div>
               </div>
 
@@ -115,7 +157,7 @@
 
             <div class="side-panel-footer">
               <div class="side-panel-version-wrap">
-                <span class="app-version" aria-label="Version 2.0.6">v2.0.6</span>
+                <span class="app-version" aria-label="Version 2.1.0">v2.1.0</span>
               </div>
               <p class="side-panel-attribution">
                 <a href="https://vanduo.dev/" target="_blank" rel="noopener noreferrer">Powered by Vanduo Framework</a>

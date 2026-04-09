@@ -17,7 +17,10 @@ import {
   getBoardSize,
   setBoardSize,
   getColorChoice,
+  getEngine,
+  setEngine,
 } from "./storage.js";
+import { getTomitankClient } from "./tomitankClient.js";
 
 /**
  * The Vanduo bundle registers components but does not start them; `init()` runs
@@ -67,6 +70,7 @@ function applyBoardMaxWidthCss(slider) {
 const dom = {
   boardContainer: document.getElementById("board-container"),
   colorChoice: document.getElementById("color-choice"),
+  engineChoice: document.getElementById("engine-choice"),
   difficultyChoice: document.getElementById("difficulty-choice"),
   thinkingChoice: document.getElementById("thinking-choice"),
   newGameBtn: document.getElementById("new-game-btn"),
@@ -90,6 +94,7 @@ const boardView = new BoardView(dom.boardContainer, {
 // Initialize controls
 const controlsView = new Controls({
   colorChoiceContainer: dom.colorChoice,
+  engineChoiceContainer: dom.engineChoice,
   difficultyChoiceContainer: dom.difficultyChoice,
   thinkingChoiceContainer: dom.thinkingChoice,
   newGameButton: dom.newGameBtn,
@@ -104,6 +109,11 @@ let game = null;
 let isProcessingMove = false;
 let gameSaveThrottle = null;
 
+/** @type {import("./ui/DisclaimerModal.js").DisclaimerModal|null} */
+let disclaimerModal = null;
+/** Resolves the first-visit gate when the user accepts the disclaimer (if shown). */
+let pendingDisclaimerResolve = null;
+
 /**
  * Initialize new game with current control settings
  */
@@ -112,17 +122,28 @@ async function initializeGame() {
 
   setDifficulty(controlsView.getDifficulty());
   setThinkingTime(Math.round(controlsView.getThinkingTime() / 1000));
+  setEngine(controlsView.getEngine());
 
   gameEndModal.hide();
   previousGameOver = false;
 
   const playerColor = controlsView.getSelectedColor();
   const difficulty = controlsView.getDifficulty();
+  const engine = controlsView.getEngine();
+
+  if (engine === "tomitank") {
+    try {
+      await getTomitankClient().resetGame();
+    } catch (e) {
+      console.warn("TomitankChess reset:", e);
+    }
+  }
 
   try {
     game = new Game({
       playerColor,
       difficulty,
+      engine,
       onUpdate: syncUIWithGame,
     });
 
@@ -161,10 +182,20 @@ async function restoreGame(savedState) {
   gameEndModal.hide();
 
   const savedDifficulty = getDifficulty();
+  const engine = getEngine() || "builtin";
+
+  if (engine === "tomitank") {
+    try {
+      await getTomitankClient().resetGame();
+    } catch (e) {
+      console.warn("TomitankChess reset:", e);
+    }
+  }
 
   try {
     game = Game.fromSaved(savedState, {
       difficulty: savedDifficulty || 6,
+      engine,
       onUpdate: syncUIWithGame,
     });
 
@@ -387,20 +418,43 @@ function updateThemeToggleUI(activeMode) {
   }
 }
 
-function setupDisclaimerModal() {
-  return new Promise((resolve) => {
-    if (getDisclaimerAccepted()) {
-      resolve();
-      return;
+/**
+ * Single disclaimer modal instance (first visit + header “info” button).
+ */
+function ensureDisclaimerModal() {
+  if (disclaimerModal) return disclaimerModal;
+  disclaimerModal = new DisclaimerModal(dom.disclaimerModalContainer, () => {
+    if (pendingDisclaimerResolve) {
+      pendingDisclaimerResolve();
+      pendingDisclaimerResolve = null;
     }
+  });
+  return disclaimerModal;
+}
 
-    const modal = new DisclaimerModal(dom.disclaimerModalContainer, () => {
+/**
+ * First visit: show modal until accepted. Returning users: modal still exists for info button.
+ */
+function setupDisclaimerModal() {
+  ensureDisclaimerModal();
+  return new Promise((resolve) => {
+    if (!getDisclaimerAccepted()) {
+      pendingDisclaimerResolve = resolve;
+      requestAnimationFrame(() => {
+        disclaimerModal.show();
+      });
+    } else {
       resolve();
-    });
+    }
+  });
+}
 
-    requestAnimationFrame(() => {
-      modal.show();
-    });
+function setupDisclaimerInfoButton() {
+  const btn = document.getElementById("disclaimer-info-btn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    ensureDisclaimerModal();
+    disclaimerModal.show();
   });
 }
 
@@ -418,6 +472,11 @@ function restorePreferences() {
   const savedColor = getColorChoice();
   if (savedColor !== null) {
     controlsView.setSelectedColor(savedColor);
+  }
+
+  const savedEngine = getEngine();
+  if (savedEngine !== null) {
+    controlsView.setSelectedEngine(savedEngine);
   }
 }
 
@@ -449,6 +508,7 @@ function initBoardSizeControl() {
 async function main() {
   initBoardSizeControl();
   setupThemeToggleButton();
+  setupDisclaimerInfoButton();
   await setupDisclaimerModal();
   restorePreferences();
 
