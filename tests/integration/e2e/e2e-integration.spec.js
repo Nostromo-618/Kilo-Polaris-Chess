@@ -15,7 +15,6 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
-        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     /**
@@ -181,7 +180,6 @@ test.describe('E2E Integration - Game Recovery', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
-        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     test('should save game state to localStorage', async ({ page }) => {
@@ -321,7 +319,6 @@ test.describe('E2E Integration - Concurrent Operations', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
-        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     test('should handle rapid clicks gracefully', async ({ page }) => {
@@ -441,7 +438,6 @@ test.describe('E2E Integration - Performance', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
-        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     test('should respond to moves quickly', async ({ page }) => {

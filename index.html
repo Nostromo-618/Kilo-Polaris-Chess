@@ -3,12 +3,12 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Kilo Aurora Chess</title>
+  <title>Aurora Polaris Chess</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Modern vanilla JS chess vs computer with 6 difficulty levels." />
 
   <!-- Vanduo Framework CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vanduo-oss/framework@v1.3.2/dist/vanduo.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vanduo-oss/framework@v1.3.3/dist/vanduo.min.css" />
 
   <!-- Phosphor Icons (Duotone) -->
   <link rel="stylesheet" href="dist/icons/phosphor/duotone/style.css" />
@@ -26,11 +26,11 @@
       <div class="vd-container-lg vd-d-flex items-center justify-between">
         <h1 class="app-title">
           <i class="ph-duotone ph-chess-piece app-title-icon" aria-hidden="true"></i>
-          <span class="app-title-text">Kilo Aurora Chess</span>
+          <span class="app-title-text">Aurora Polaris Chess</span>
           <i class="ph-duotone ph-brain thinking-icon" aria-hidden="true"></i>
         </h1>
         <div class="header-right-section">
-          <div class="header-controls vd-d-flex items-center vd-gap-4">
+          <div class="header-controls vd-d-flex items-center vd-gap-4" id="header-controls">
             <button
               type="button"
               id="disclaimer-info-btn"
@@ -42,7 +42,7 @@
             <a
               id="github-repo-link"
               class="vd-theme-customizer-trigger"
-              href="https://github.com/Nostromo-618/kilo-aurora-chess"
+              href="https://github.com/Nostromo-618/aurora-polaris-chess"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="View source on GitHub"
@@ -56,6 +56,24 @@
               <i class="ph-duotone ph-paint-roller"></i>
             </button>
           </div>
+          <button
+            type="button"
+            id="mobile-menu-toggle"
+            class="vd-theme-customizer-trigger mobile-menu-toggle"
+            aria-label="Open header menu"
+            aria-expanded="false"
+            aria-controls="mobile-side-menu"
+          >
+            <i class="ph-duotone ph-list" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div id="mobile-side-menu" class="mobile-side-menu" aria-hidden="true">
+        <div class="mobile-side-menu-panel" role="dialog" aria-modal="true" aria-label="Header menu">
+          <button type="button" id="mobile-menu-close" class="mobile-menu-close" aria-label="Close header menu">
+            <i class="ph-duotone ph-x" aria-hidden="true"></i>
+          </button>
+          <div id="mobile-menu-controls-slot" class="mobile-menu-controls-slot"></div>
         </div>
       </div>
     </header>
@@ -90,16 +108,16 @@
                   <button
                     type="button"
                     data-engine="builtin"
-                    class="vd-btn vd-btn-outline vd-btn-sm vd-is-active"
+                    class="vd-btn vd-btn-outline vd-btn-sm"
                     data-tooltip="Beginner Friendly"
                     data-tooltip-placement="bottom"
                   >
-                    Kilo Aurora
+                    Aurora Polaris
                   </button>
                   <button
                     type="button"
                     data-engine="tomitank"
-                    class="vd-btn vd-btn-outline vd-btn-sm"
+                    class="vd-btn vd-btn-outline vd-btn-sm vd-is-active"
                     data-tooltip="For Experienced Player"
                     data-tooltip-placement="bottom"
                   >
@@ -113,23 +131,22 @@
                 <div class="vd-btn-group" id="difficulty-choice" role="group" aria-labelledby="difficulty-label" aria-describedby="difficulty-desc">
                   <button data-level="1" class="vd-btn vd-btn-outline vd-btn-sm" title="Very Easy">1</button>
                   <button data-level="2" class="vd-btn vd-btn-outline vd-btn-sm" title="Easy">2</button>
-                  <button data-level="3" class="vd-btn vd-btn-outline vd-btn-sm" title="Medium">3</button>
+                  <button data-level="3" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active" title="Medium">3</button>
                   <button data-level="4" class="vd-btn vd-btn-outline vd-btn-sm" title="Hard">4</button>
                   <button data-level="5" class="vd-btn vd-btn-outline vd-btn-sm" title="Very Hard">5</button>
-                  <button data-level="6" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active" title="Expert">6</button>
+                  <button data-level="6" class="vd-btn vd-btn-outline vd-btn-sm" title="Expert">6</button>
                 </div>
                 <span id="difficulty-desc" class="vd-sr-only">Select AI difficulty level from 1 (easiest) to 6 (expert)</span>
               </div>
 
               <div class="vd-form-group">
-                <div class="vd-form-label" id="thinking-label">Maximum Thinking Time:</div>
-                <div class="vd-btn-group" id="thinking-choice" role="group" aria-labelledby="thinking-label">
-                  <button data-time="5" class="vd-btn vd-btn-outline vd-btn-sm">5s</button>
-                  <button data-time="10" class="vd-btn vd-btn-outline vd-btn-sm">10s</button>
-                  <button data-time="20" class="vd-btn vd-btn-outline vd-btn-sm">20s</button>
-                  <button data-time="30" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">30s</button>
-                  <button data-time="60" class="vd-btn vd-btn-outline vd-btn-sm">60s</button>
-                </div>
+                <label class="vd-form-label" for="promotion-piece-select">Pawn promotion:</label>
+                <select id="promotion-piece-select" class="vd-input">
+                  <option value="Q" selected>Queen</option>
+                  <option value="R">Rook</option>
+                  <option value="B">Bishop</option>
+                  <option value="N">Knight</option>
+                </select>
               </div>
             </section>
 
@@ -157,10 +174,10 @@
 
             <div class="side-panel-footer">
               <div class="side-panel-version-wrap">
-                <span class="app-version" aria-label="Version 2.1.0">v2.1.0</span>
+                <button type="button" id="changelog-trigger" class="app-version" aria-label="Open changelog for version 2.1.1">v2.1.1</button>
               </div>
               <p class="side-panel-attribution">
-                <a href="https://vanduo.dev/" target="_blank" rel="noopener noreferrer">Powered by Vanduo Framework</a>
+                <a href="https://vanduo.dev/" target="_blank" rel="noopener noreferrer">UI powered by Vanduo Framework</a>
               </p>
             </div>
           </div>
@@ -170,9 +187,10 @@
 
     <div id="game-end-modal-container"></div>
     <div id="disclaimer-modal-container"></div>
+    <div id="changelog-modal-container"></div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/gh/vanduo-oss/framework@v1.3.2/dist/vanduo.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/vanduo-oss/framework@v1.3.3/dist/vanduo.min.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 

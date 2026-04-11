@@ -4,7 +4,7 @@ This file satisfies attribution and license notice requirements for bundled thir
 
 ---
 
-## TomitankChess (optional engine)
+## TomitankChess (strong default engine)
 
 **Location in this repository:** [`vendor/tomitankChess.js`](vendor/tomitankChess.js)
 

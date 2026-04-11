@@ -16,8 +16,6 @@ test.describe('Full Game Flow', () => {
         await page.locator('#color-choice button[data-color="white"]').click();
         // Set to Level 1 (very easy) to minimize AI thinking time
         await page.locator('#difficulty-choice button[data-level="1"]').click();
-        // Set thinking time to minimum
-        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     /**

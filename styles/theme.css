@@ -1,5 +1,5 @@
 /**
- * Theme variables and overrides for Kilo Aurora Chess
+ * Theme variables and overrides for Aurora Polaris Chess
  * Mapped to Vanduo Framework's CSS variable system
  */
 
@@ -8,12 +8,15 @@
    ============================================ */
 
 :root {
+  /* Matches Vanduo theme customizer “card / surface” radius (was 0.5rem) */
+  --card-border-radius: 0.375rem;
+
   /* Chess-specific colors */
   --board-light: #f0d9b5;
   --board-dark: #b58863;
-  --board-highlight: var(--yellow-5);
-  --board-legal-move: rgba(16, 185, 129, 0.4);
-  --board-last-move: rgba(34, 184, 207, 0.4);
+  --board-highlight: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --board-legal-move: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  --board-last-move: color-mix(in srgb, var(--color-primary) 28%, transparent);
 
   /* Piece colors */
   --piece-white: #111827;
@@ -158,6 +161,8 @@
 
 .app-version {
   display: inline-block;
+  background: transparent;
+  cursor: pointer;
   font-size: var(--font-size-sm);
   font-weight: 600;
   line-height: 1.25;
@@ -166,6 +171,13 @@
   border-radius: 9999px;
   padding: 0.2em 0.55em;
   letter-spacing: 0.02em;
+}
+
+.app-version:hover,
+.app-version:focus-visible {
+  background: var(--color-primary);
+  color: var(--color-white);
+  outline: none;
 }
 
 .app-main {
@@ -207,6 +219,14 @@
 .side-panel-attribution a:hover {
   color: var(--color-primary);
   text-decoration: underline;
+}
+
+.mobile-menu-toggle {
+  display: none;
+}
+
+.mobile-side-menu {
+  display: none;
 }
 
 /* Gradient text utility */
@@ -262,6 +282,23 @@
   .app-title {
     font-size: var(--font-size-lg);
   }
+
+  .app-header.glass-panel {
+    background: var(--color-bg-elevated, #ffffff);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  [data-theme="dark"] .app-header.glass-panel {
+    background: var(--color-bg-elevated, var(--gray-900, #0f172a));
+  }
+}
+
+@media (prefers-color-scheme: dark) and (max-width: 576px) {
+  :root:not([data-theme="light"]) .app-header.glass-panel {
+    background: var(--color-bg-elevated, var(--gray-900, #0f172a));
+  }
 }
 
 /* ============================================
@@ -279,10 +316,12 @@
   margin: clamp(0.5rem, 2vh, 1.25rem) auto;
   display: flex;
   flex-direction: column;
+  border-radius: var(--card-border-radius, 0.375rem);
+  overflow: hidden;
 }
 
 .disclaimer-modal-content {
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-border-radius, 0.375rem);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -414,6 +453,8 @@
     /* Fill most of the viewport; golden ratio is less important than readability */
     max-height: min(94vh, 94dvh) !important;
     margin: 0.375rem auto !important;
+    border-radius: var(--card-border-radius, 0.375rem) !important;
+    overflow: hidden !important;
   }
 
   .disclaimer-modal-content {
@@ -433,5 +474,311 @@
     width: min(92vw, 1200px) !important;
     max-width: min(92vw, 1200px) !important;
     max-height: min(88vh, calc(var(--disclaimer-modal-w) / 1.618)) !important;
+  }
+}
+
+/* ============================================
+  CHANGELOG MODAL
+  ============================================ */
+
+.changelog-modal-dialog {
+  width: min(95vw, 1100px);
+  max-width: min(95vw, 1100px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--card-border-radius, 0.375rem);
+  overflow: hidden;
+}
+
+.changelog-modal-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  max-height: inherit;
+  overflow: hidden;
+  border-radius: var(--card-border-radius, 0.375rem);
+}
+
+.changelog-modal-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-8, 8px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.changelog-modal-header .vd-modal-title {
+  flex: 1 1 auto;
+  margin: 0;
+  min-width: 0;
+}
+
+.changelog-modal-body {
+  max-height: min(78vh, 880px);
+  overflow-y: auto;
+  padding: var(--spacing-21, 21px);
+}
+
+.changelog-subtitle {
+  margin-top: 0;
+  margin-bottom: var(--spacing-13, 13px);
+  color: var(--text-muted);
+}
+
+.version-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-border-radius, var(--radius-lg));
+  overflow: hidden;
+  margin-bottom: var(--spacing-13, 13px);
+}
+
+.version-header {
+  padding: var(--spacing-8, 8px) var(--spacing-13, 13px);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.version-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-8, 8px);
+}
+
+.version-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.version-body {
+  padding: var(--spacing-13, 13px);
+}
+
+.changelog-column-title {
+  margin-top: 0;
+  margin-bottom: var(--spacing-8, 8px);
+}
+
+.change-group h5 {
+  margin: 0 0 var(--spacing-8, 8px);
+}
+
+.change-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.change-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-8, 8px);
+  padding: var(--spacing-8, 8px) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.change-item:last-child {
+  border-bottom: none;
+}
+
+.change-item i {
+  color: var(--primary-6);
+  margin-top: 0.2rem;
+}
+
+.change-item strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.change-item p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* Changelog close: Vanduo may expect ::before; ensure icon is visible */
+#changelog-modal .vd-modal-close#changelog-close-btn,
+#changelog-modal #changelog-close-btn.vd-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#changelog-modal #changelog-close-btn .ph-duotone {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+@media (max-width: 575px) {
+  .mobile-menu-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-side-menu {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--transition-fast), visibility var(--transition-fast);
+    z-index: 120;
+  }
+
+  .mobile-side-menu.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .mobile-side-menu-panel {
+    margin-left: auto;
+    width: min(85vw, 340px);
+    height: 100%;
+    /* Opaque panel — no glass / backdrop bleed-through over page content */
+    background-color: var(--color-bg-elevated, var(--gray-0, #ffffff));
+    background-image: none;
+    border-left: 1px solid var(--border-color);
+    box-shadow: -12px 0 26px rgba(0, 0, 0, 0.18);
+    padding: var(--spacing-21, 21px) var(--spacing-13, 13px);
+    transform: translateX(100%);
+    transition: transform var(--transition-fast);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  [data-theme="dark"] .mobile-side-menu-panel {
+    background-color: var(--color-bg-elevated, var(--gray-900, #0f172a));
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .mobile-side-menu-panel {
+      background-color: var(--color-bg-elevated, var(--gray-900, #0f172a));
+    }
+  }
+
+  .mobile-side-menu.is-open .mobile-side-menu-panel {
+    transform: translateX(0);
+  }
+
+  .mobile-menu-close {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+
+  .mobile-menu-controls-slot {
+    margin-top: var(--spacing-21, 21px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-8, 8px);
+  }
+
+  .mobile-menu-controls-slot > .vd-theme-customizer-trigger {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-8, 8px);
+    padding: var(--spacing-8, 8px) var(--spacing-13, 13px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .mobile-menu-label {
+    font-weight: 500;
+    pointer-events: none;
+  }
+
+  body.body-mobile-menu-open {
+    overflow: hidden;
+  }
+
+  /* Changelog / version modal — mirror disclaimer modal sizing on narrow screens */
+  #changelog-modal .vd-modal-dialog.changelog-modal-dialog,
+  #changelog-modal .changelog-modal-dialog {
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+    max-height: min(94vh, 94dvh) !important;
+    margin: 0.375rem auto !important;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-radius: var(--card-border-radius, 0.375rem) !important;
+    overflow: hidden !important;
+  }
+
+  #changelog-modal .vd-modal-content.changelog-modal-content,
+  #changelog-modal .changelog-modal-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: min(94vh, 94dvh);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #changelog-modal .changelog-modal-header,
+  #changelog-modal .vd-modal-header.changelog-modal-header {
+    flex-shrink: 0;
+    padding: var(--spacing-13, 13px) var(--spacing-8, 8px);
+  }
+
+  #changelog-modal .changelog-modal-body,
+  #changelog-modal .vd-modal-body.changelog-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--spacing-13, 13px) var(--spacing-8, 8px);
+  }
+
+  #changelog-modal .changelog-subtitle {
+    margin-bottom: var(--spacing-8, 8px);
+    font-size: var(--font-size-sm);
+    line-height: 1.45;
+  }
+
+  #changelog-modal .version-body {
+    padding: var(--spacing-8, 8px);
+  }
+
+  #changelog-modal .version-body .vd-row {
+    flex-direction: column;
+  }
+
+  #changelog-modal .version-body .vd-col-md-6 {
+    width: 100%;
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  #changelog-modal .version-header {
+    padding: var(--spacing-8, 8px);
+  }
+
+  #changelog-modal .change-item {
+    padding: var(--spacing-5, 5px) 0;
+    gap: var(--spacing-5, 5px);
   }
 }

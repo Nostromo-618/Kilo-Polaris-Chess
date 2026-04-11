@@ -140,12 +140,10 @@ test.describe('UI Integration - Controls + Game State', () => {
         expect(value).toBe('4');
     });
 
-    test('should update thinking time when selecting preset', async ({ page }) => {
-        await page.locator('#thinking-choice button[data-time="60"]').click();
-        const active = await page.evaluate(() =>
-            document.querySelector('#thinking-choice button.vd-is-active')?.getAttribute('data-time')
-        );
-        expect(active).toBe('60');
+    test('should update promotion piece when selecting option', async ({ page }) => {
+        await page.selectOption('#promotion-piece-select', 'B');
+        const active = await page.inputValue('#promotion-piece-select');
+        expect(active).toBe('B');
     });
 
     test('should change color choice when clicking button', async ({ page }) => {
@@ -281,12 +279,23 @@ test.describe('UI Integration - Theme Switching', () => {
         await page.reload();
     });
 
+    async function ensureThemeCustomizerVisible(page) {
+        const customizer = page.locator('[data-theme-customizer-trigger]');
+        if (await customizer.isVisible()) return;
+
+        const menuToggle = page.locator('#mobile-menu-toggle');
+        if (await menuToggle.isVisible()) {
+            await menuToggle.click();
+        }
+        await expect(customizer).toBeVisible();
+    }
+
     test('should have theme customizer button', async ({ page }) => {
-        const themeBtn = await page.locator('[data-theme-customizer-trigger]');
-        await expect(themeBtn).toBeVisible();
+        await ensureThemeCustomizerVisible(page);
     });
 
     test('should open theme customizer when clicked', async ({ page }) => {
+        await ensureThemeCustomizerVisible(page);
         await page.click('[data-theme-customizer-trigger]');
 
         const panel = await page.locator('.vd-theme-customizer-panel');

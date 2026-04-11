@@ -2,6 +2,7 @@ import { BoardView } from "./ui/BoardView.js";
 import { Controls } from "./ui/Controls.js";
 import { GameEndModal } from "./ui/GameEndModal.js";
 import { DisclaimerModal } from "./ui/DisclaimerModal.js";
+import { ChangelogModal } from "./ui/ChangelogModal.js";
 import { Game } from "./Game.js";
 import {
   getDisclaimerAccepted,
@@ -9,8 +10,6 @@ import {
   setTheme,
   getDifficulty,
   setDifficulty,
-  getThinkingTime,
-  setThinkingTime,
   getGame,
   setGame,
   clearGame,
@@ -37,7 +36,6 @@ if (typeof window.Vanduo !== "undefined" && typeof window.Vanduo.init === "funct
  *   - Disclaimer acceptance      via storage.{get,set}DisclaimerAccepted
  *   - Theme preference           via storage.{get,set}Theme
  *   - Difficulty setting         via storage.{get,set}Difficulty
- *   - Thinking time              via storage.{get,set}ThinkingTime
  *   - In-progress game           via storage.{get,set,clear}Game
  *   - Desktop board size         via storage.{get,set}BoardSize
  */
@@ -72,7 +70,7 @@ const dom = {
   colorChoice: document.getElementById("color-choice"),
   engineChoice: document.getElementById("engine-choice"),
   difficultyChoice: document.getElementById("difficulty-choice"),
-  thinkingChoice: document.getElementById("thinking-choice"),
+  promotionSelect: document.getElementById("promotion-piece-select"),
   newGameBtn: document.getElementById("new-game-btn"),
   statusText: document.getElementById("status-text"),
   turnIndicator: document.getElementById("turn-indicator"),
@@ -83,6 +81,17 @@ const dom = {
   boardSizeRange: document.getElementById("board-size-range"),
   boardSizeValue: document.getElementById("board-size-value"),
   header: document.querySelector(".app-header"),
+  headerControls: document.getElementById("header-controls"),
+  themeToggleBtn: document.getElementById("theme-toggle-btn"),
+  githubRepoLink: document.getElementById("github-repo-link"),
+  disclaimerInfoBtn: document.getElementById("disclaimer-info-btn"),
+  themeCustomizerBtn: document.querySelector("[data-theme-customizer-trigger]"),
+  mobileMenuToggle: document.getElementById("mobile-menu-toggle"),
+  mobileMenuClose: document.getElementById("mobile-menu-close"),
+  mobileSideMenu: document.getElementById("mobile-side-menu"),
+  mobileMenuControlsSlot: document.getElementById("mobile-menu-controls-slot"),
+  changelogModalContainer: document.getElementById("changelog-modal-container"),
+  changelogTrigger: document.getElementById("changelog-trigger"),
   thinkingIcon: document.querySelector(".thinking-icon"),
 };
 
@@ -96,7 +105,7 @@ const controlsView = new Controls({
   colorChoiceContainer: dom.colorChoice,
   engineChoiceContainer: dom.engineChoice,
   difficultyChoiceContainer: dom.difficultyChoice,
-  thinkingChoiceContainer: dom.thinkingChoice,
+  promotionSelect: dom.promotionSelect,
   newGameButton: dom.newGameBtn,
   onNewGameRequested: handleNewGameRequested,
 });
@@ -111,6 +120,7 @@ let gameSaveThrottle = null;
 
 /** @type {import("./ui/DisclaimerModal.js").DisclaimerModal|null} */
 let disclaimerModal = null;
+let changelogModal = null;
 /** Resolves the first-visit gate when the user accepts the disclaimer (if shown). */
 let pendingDisclaimerResolve = null;
 
@@ -121,7 +131,6 @@ async function initializeGame() {
   clearGame();
 
   setDifficulty(controlsView.getDifficulty());
-  setThinkingTime(Math.round(controlsView.getThinkingTime() / 1000));
   setEngine(controlsView.getEngine());
 
   gameEndModal.hide();
@@ -237,7 +246,7 @@ async function handleSquareSelected(square) {
   if (game.getCurrentTurn() !== game.getPlayerColor()) return;
   if (game.isGameOver()) return;
 
-  const result = game.handlePlayerSquareSelection(square);
+  const result = game.handlePlayerSquareSelection(square, controlsView.getPromotionPiece());
 
   if (!result.changed) {
     boardView.updateHighlights({
@@ -278,8 +287,7 @@ async function triggerAIMove() {
   syncBusyState(true);
 
   try {
-    const timeout = controlsView.getThinkingTime();
-    const aiMove = await game.computeAIMove(timeout);
+    const aiMove = await game.computeAIMove();
     if (!aiMove) {
       syncUIWithGame(game.getSnapshot());
       return;
@@ -464,11 +472,6 @@ function restorePreferences() {
     controlsView.setDifficulty(savedDifficulty);
   }
 
-  const savedThinkingTime = getThinkingTime();
-  if (savedThinkingTime !== null) {
-    controlsView.setThinkingTime(savedThinkingTime);
-  }
-
   const savedColor = getColorChoice();
   if (savedColor !== null) {
     controlsView.setSelectedColor(savedColor);
@@ -478,6 +481,135 @@ function restorePreferences() {
   if (savedEngine !== null) {
     controlsView.setSelectedEngine(savedEngine);
   }
+}
+
+function ensureChangelogModal() {
+  if (changelogModal) return changelogModal;
+  changelogModal = new ChangelogModal(dom.changelogModalContainer);
+  return changelogModal;
+}
+
+function setupChangelogTrigger() {
+  if (!dom.changelogTrigger) return;
+  dom.changelogTrigger.addEventListener("click", () => {
+    ensureChangelogModal().show();
+  });
+}
+
+function setupMobileMenu() {
+  if (
+    !dom.mobileMenuToggle ||
+    !dom.mobileMenuClose ||
+    !dom.mobileSideMenu ||
+    !dom.mobileMenuControlsSlot ||
+    !dom.headerControls ||
+    !dom.themeToggleBtn
+  ) {
+    return;
+  }
+
+  const managedControls = [
+    dom.disclaimerInfoBtn,
+    dom.githubRepoLink,
+    dom.themeCustomizerBtn,
+  ].filter(Boolean);
+
+  const mobileLabels = new Map([
+    [dom.disclaimerInfoBtn, "About"],
+    [dom.githubRepoLink, "GitHub"],
+    [dom.themeCustomizerBtn, "Theme"],
+  ]);
+
+  const mediaQuery = window.matchMedia("(max-width: 575px)");
+
+  const openMenu = () => {
+    dom.mobileSideMenu.classList.add("is-open");
+    dom.mobileSideMenu.setAttribute("aria-hidden", "false");
+    dom.mobileMenuToggle.setAttribute("aria-expanded", "true");
+    document.body.classList.add("body-mobile-menu-open");
+  };
+
+  const closeMenu = () => {
+    dom.mobileSideMenu.classList.remove("is-open");
+    dom.mobileSideMenu.setAttribute("aria-hidden", "true");
+    dom.mobileMenuToggle.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("body-mobile-menu-open");
+  };
+
+  const syncPlacement = () => {
+    const isMobile = mediaQuery.matches;
+    if (isMobile) {
+      managedControls.forEach((control) => {
+        if (control.parentElement !== dom.mobileMenuControlsSlot) {
+          dom.mobileMenuControlsSlot.appendChild(control);
+        }
+        const label = mobileLabels.get(control);
+        if (label && !control.querySelector(".mobile-menu-label")) {
+          const span = document.createElement("span");
+          span.className = "mobile-menu-label";
+          span.textContent = label;
+          control.appendChild(span);
+        }
+      });
+      return;
+    }
+
+    managedControls.forEach((control) => {
+      const span = control.querySelector(".mobile-menu-label");
+      if (span) span.remove();
+    });
+
+    const [infoBtn, githubLink, customizerBtn] = managedControls;
+    if (infoBtn) {
+      dom.headerControls.insertBefore(infoBtn, dom.themeToggleBtn);
+    }
+    if (githubLink) {
+      dom.headerControls.insertBefore(githubLink, dom.themeToggleBtn);
+    }
+    if (customizerBtn) {
+      dom.themeToggleBtn.insertAdjacentElement("afterend", customizerBtn);
+    }
+    closeMenu();
+  };
+
+  dom.mobileMenuToggle.addEventListener("click", () => {
+    if (dom.mobileSideMenu.classList.contains("is-open")) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  });
+
+  dom.mobileMenuClose.addEventListener("click", closeMenu);
+
+  dom.mobileSideMenu.addEventListener("click", (event) => {
+    if (event.target === dom.mobileSideMenu) {
+      closeMenu();
+      return;
+    }
+
+    if (
+      event.target instanceof HTMLElement &&
+      event.target.closest("a, button") &&
+      dom.mobileMenuControlsSlot.contains(event.target.closest("a, button"))
+    ) {
+      closeMenu();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && dom.mobileSideMenu.classList.contains("is-open")) {
+      closeMenu();
+    }
+  });
+
+  if (typeof mediaQuery.addEventListener === "function") {
+    mediaQuery.addEventListener("change", syncPlacement);
+  } else {
+    mediaQuery.addListener(syncPlacement);
+  }
+
+  syncPlacement();
 }
 
 function initBoardSizeControl() {
@@ -508,6 +640,8 @@ function initBoardSizeControl() {
 async function main() {
   initBoardSizeControl();
   setupThemeToggleButton();
+  setupMobileMenu();
+  setupChangelogTrigger();
   setupDisclaimerInfoButton();
   await setupDisclaimerModal();
   restorePreferences();

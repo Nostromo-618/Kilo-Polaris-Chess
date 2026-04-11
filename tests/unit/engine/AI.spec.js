@@ -452,7 +452,6 @@ test.describe('AI - Difficulty Levels', () => {
 
         // Test at level 5
         await page.locator('#difficulty-choice button[data-level="5"]').click();
-        await page.locator('#thinking-choice button[data-time="5"]').click();
 
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');

@@ -4,7 +4,7 @@
  * Handles:
  * - Color selection (white / black / random)
  * - Difficulty selection (1-6)
- * - Thinking time (5s / 10s / 20s / 30s / 60s)
+ * - Pawn promotion preference (Q / R / B / N)
  * - Engine (built-in Kilo Aurora vs TomitankChess)
  * - New game button
  *
@@ -19,7 +19,7 @@ export class Controls {
    * @param {HTMLElement} options.colorChoiceContainer
    * @param {HTMLElement} [options.engineChoiceContainer]
    * @param {HTMLElement} options.difficultyChoiceContainer
-   * @param {HTMLElement} options.thinkingChoiceContainer
+   * @param {HTMLSelectElement} [options.promotionSelect]
    * @param {HTMLButtonElement} options.newGameButton
    * @param {HTMLSelectElement} [options.difficultySelect]
    * @param {() => void} options.onNewGameRequested
@@ -28,7 +28,7 @@ export class Controls {
     colorChoiceContainer,
     engineChoiceContainer,
     difficultyChoiceContainer,
-    thinkingChoiceContainer,
+    promotionSelect,
     newGameButton,
     difficultySelect,
     onNewGameRequested,
@@ -36,21 +36,21 @@ export class Controls {
     this.colorChoiceContainer = colorChoiceContainer;
     this.engineChoiceContainer = engineChoiceContainer || null;
     this.difficultyChoiceContainer = difficultyChoiceContainer;
-    this.thinkingChoiceContainer = thinkingChoiceContainer;
+    this.promotionSelect = promotionSelect || null;
     this.newGameButton = newGameButton;
     this.difficultySelect = difficultySelect || null;
     this.onNewGameRequested = onNewGameRequested || (() => { });
 
     this.selectedColor = "random";
     /** @type {"builtin"|"tomitank"} */
-    this.selectedEngine = "builtin";
-    this.selectedDifficulty = 6;
-    this.selectedThinkingTime = 30;
+    this.selectedEngine = "tomitank";
+    this.selectedDifficulty = 3;
+    this.selectedPromotion = "Q";
 
     this.handleColorClick = this.handleColorClick.bind(this);
     this.handleEngineClick = this.handleEngineClick.bind(this);
     this.handleDifficultyClick = this.handleDifficultyClick.bind(this);
-    this.handleThinkingClick = this.handleThinkingClick.bind(this);
+    this.handlePromotionChange = this.handlePromotionChange.bind(this);
     this.handleNewGameClick = this.handleNewGameClick.bind(this);
 
     this.init();
@@ -79,8 +79,9 @@ export class Controls {
       this.difficultyChoiceContainer.addEventListener("click", this.handleDifficultyClick);
     }
 
-    if (this.thinkingChoiceContainer) {
-      this.thinkingChoiceContainer.addEventListener("click", this.handleThinkingClick);
+    if (this.promotionSelect) {
+      this.promotionSelect.addEventListener("change", this.handlePromotionChange);
+      this.promotionSelect.value = this.selectedPromotion;
     }
 
     if (this.newGameButton) {
@@ -95,7 +96,7 @@ export class Controls {
 
     if (this.difficultySelect) {
       this.difficultySelect.addEventListener("change", () => {
-        this.selectedDifficulty = Number(this.difficultySelect.value) || 6;
+        this.selectedDifficulty = Number(this.difficultySelect.value) || 3;
         this.syncDifficultyButtons();
       });
     }
@@ -151,20 +152,6 @@ export class Controls {
     }
   }
 
-  syncThinkingButtons() {
-    if (this.thinkingChoiceContainer) {
-      const buttons = this.thinkingChoiceContainer.querySelectorAll("button");
-      buttons.forEach((btn) => {
-        const time = Number(btn.getAttribute("data-time"));
-        if (time === this.selectedThinkingTime) {
-          btn.classList.add("vd-is-active");
-        } else {
-          btn.classList.remove("vd-is-active");
-        }
-      });
-    }
-  }
-
   handleColorClick(event) {
     const target = event.target;
     if (!(target instanceof HTMLButtonElement)) return;
@@ -200,18 +187,12 @@ export class Controls {
     target.classList.add("vd-is-active");
   }
 
-  handleThinkingClick(event) {
+  handlePromotionChange(event) {
     const target = event.target;
-    if (!(target instanceof HTMLButtonElement)) return;
-
-    const time = Number(target.getAttribute("data-time"));
-    if (Number.isNaN(time) || time < 1) return;
-
-    this.selectedThinkingTime = time;
-
-    const buttons = this.thinkingChoiceContainer.querySelectorAll("button");
-    buttons.forEach((btn) => btn.classList.remove("vd-is-active"));
-    target.classList.add("vd-is-active");
+    if (!(target instanceof HTMLSelectElement)) return;
+    const promotion = target.value;
+    if (!["Q", "R", "B", "N"].includes(promotion)) return;
+    this.selectedPromotion = promotion;
   }
 
   handleNewGameClick() {
@@ -224,7 +205,7 @@ export class Controls {
 
   getDifficulty() {
     const val = this.selectedDifficulty;
-    if (Number.isNaN(val) || val < 1 || val > 6) return 6;
+    if (Number.isNaN(val) || val < 1 || val > 6) return 3;
     return val;
   }
 
@@ -253,7 +234,7 @@ export class Controls {
   }
 
   setDifficulty(level) {
-    const clamped = Math.max(1, Math.min(6, Number(level) || 6));
+    const clamped = Math.max(1, Math.min(6, Number(level) || 3));
     this.selectedDifficulty = clamped;
     if (this.difficultyChoiceContainer) {
       const buttons = this.difficultyChoiceContainer.querySelectorAll("button");
@@ -282,37 +263,11 @@ export class Controls {
   }
 
   /**
-   * Get configured thinking time in milliseconds.
-   * @returns {number}
+   * @returns {"Q"|"R"|"B"|"N"}
    */
-  getThinkingTime() {
-    return Math.max(1000, Math.min(60000, this.selectedThinkingTime * 1000));
-  }
-
-  /**
-   * Set thinking time selection.
-   * @param {number} seconds
-   */
-  setThinkingTime(seconds) {
-    const clamped = Math.max(1, Math.min(60, seconds));
-    this.selectedThinkingTime = clamped;
-    if (this.thinkingChoiceContainer) {
-      const buttons = this.thinkingChoiceContainer.querySelectorAll("button");
-      let matched = false;
-      buttons.forEach((btn) => {
-        if (Number(btn.getAttribute("data-time")) === clamped) {
-          btn.classList.add("vd-is-active");
-          matched = true;
-        } else {
-          btn.classList.remove("vd-is-active");
-        }
-      });
-      if (!matched) {
-        this.selectedThinkingTime = 30;
-        buttons.forEach((btn) => {
-          btn.classList.toggle("vd-is-active", Number(btn.getAttribute("data-time")) === 30);
-        });
-      }
-    }
+  getPromotionPiece() {
+    return ["Q", "R", "B", "N"].includes(this.selectedPromotion)
+      ? this.selectedPromotion
+      : "Q";
   }
 }

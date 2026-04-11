@@ -46,17 +46,14 @@ test.describe('Security - Input Validation', () => {
         expect(Number(level)).toBeLessThanOrEqual(6);
     });
 
-    test('should validate thinking time from storage', async ({ page }) => {
-        await page.evaluate(() => localStorage.setItem('kpc-thinking-time', '999'));
-        await page.reload();
-        await page.waitForTimeout(200);
-
-        const active = await page.evaluate(() =>
-            document.querySelector('#thinking-choice button.vd-is-active')?.getAttribute('data-time')
-        );
-        expect(active).toBeTruthy();
-        expect(Number(active)).toBeGreaterThanOrEqual(1);
-        expect(Number(active)).toBeLessThanOrEqual(60);
+    test('should validate promotion selector input from DOM', async ({ page }) => {
+        const value = await page.evaluate(() => {
+            const select = document.querySelector('#promotion-piece-select');
+            if (!select) return null;
+            select.value = 'INVALID';
+            return select.value;
+        });
+        expect(['Q', 'R', 'B', 'N']).toContain(value);
     });
 });
 

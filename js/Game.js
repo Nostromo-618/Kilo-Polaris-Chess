@@ -94,6 +94,7 @@ export class Game {
     this.setDifficulty(difficulty || 6);
     /** @type {"builtin"|"tomitank"} */
     this.engine = engine === "tomitank" ? "tomitank" : "builtin";
+    this.aiMoveTimeMs = 10000;
     this.notify();
   }
 
@@ -110,6 +111,7 @@ export class Game {
     instance.state = new GameState(serialized);
     instance.setDifficulty(difficulty || serialized.difficulty || 6);
     instance.engine = engine === "tomitank" ? "tomitank" : "builtin";
+    instance.aiMoveTimeMs = 10000;
     // Re-compute status text so UI shows correct message
     instance.state.updateStatusText();
     instance.notify();
@@ -211,7 +213,7 @@ export class Game {
    *   lastMove: {from:string,to:string}|null
    * }}
    */
-  handlePlayerSquareSelection(square) {
+  handlePlayerSquareSelection(square, promotionChoice = "Q") {
     if (this.isGameOver()) {
       return {
         changed: false,
@@ -222,7 +224,7 @@ export class Game {
     }
 
     const color = this.getPlayerColor();
-    const result = this.state.handleSelection(square, color);
+    const result = this.state.handleSelection(square, color, promotionChoice);
     if (result.moved) {
       this.notify();
     }
@@ -268,12 +270,12 @@ export class Game {
    * Ask AI to compute best move given current state and difficulty.
    * Uses Web Worker for non-blocking computation when available.
    *
-   * @param {number} [timeout=10000] - Maximum time for AI search in ms
    * @returns {Promise<import("./engine/Move.js").Move|null>}
    */
-  async computeAIMove(timeout = 10000) {
+  async computeAIMove() {
     if (this.isGameOver()) return null;
     const aiColor = this.getCurrentTurn();
+    const timeout = this.aiMoveTimeMs;
 
     if (this.engine === "tomitank") {
       try {

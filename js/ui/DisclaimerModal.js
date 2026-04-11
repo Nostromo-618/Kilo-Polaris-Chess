@@ -46,7 +46,7 @@ export class DisclaimerModal {
               <i class="ph-duotone ph-chess-piece"></i>
             </span>
             <h3 id="disclaimer-modal-title" class="vd-modal-title disclaimer-modal-title">
-              Welcome to Kilo Aurora Chess
+              Welcome to Aurora Polaris Chess
             </h3>
           </div>
           <div class="vd-modal-body disclaimer-modal-body">
@@ -72,7 +72,7 @@ export class DisclaimerModal {
                 </div>
               </li>
               <li>
-                <i class="ph-duotone ph-open-source-logo" aria-hidden="true"></i>
+                <i class="ph-duotone ph-code" aria-hidden="true"></i>
                 <div class="disclaimer-li-body">
                   <strong>Open source.</strong> This project is provided as-is
                   under the MIT licence with no warranty of any kind.
@@ -81,7 +81,7 @@ export class DisclaimerModal {
               <li>
                 <i class="ph-duotone ph-cpu" aria-hidden="true"></i>
                 <div class="disclaimer-li-body">
-                  <strong>Optional engine.</strong> You can play against
+                  <strong>Strong engine.</strong> You can play against
                   <strong>TomitankChess</strong> (GPL-3.0), an embedded UCI engine from
                   <a
                     href="https://github.com/tomitank/tomitankChess"
@@ -89,14 +89,27 @@ export class DisclaimerModal {
                     rel="noopener noreferrer"
                     class="disclaimer-inline-link"
                   >github.com/tomitank/tomitankChess</a>.
-                  The built-in Kilo Aurora AI remains the default; see
+                  Aurora Polaris AI is also available; see
                   <a
-                    href="https://github.com/Nostromo-618/kilo-aurora-chess/blob/main/THIRD_PARTY_NOTICES.md"
+                    href="https://github.com/Nostromo-618/aurora-polaris-chess/blob/main/THIRD_PARTY_NOTICES.md"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="disclaimer-inline-link"
                   >THIRD_PARTY_NOTICES.md</a>
                   for licence details.
+                </div>
+              </li>
+              <li>
+                <i class="ph-duotone ph-star" aria-hidden="true"></i>
+                <div class="disclaimer-li-body">
+                  <strong>Support the project.</strong> If you enjoy Aurora Polaris Chess,
+                  please consider starring the repository on GitHub:
+                  <a
+                    href="https://github.com/Nostromo-618/aurora-polaris-chess"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="disclaimer-inline-link"
+                  >github.com/Nostromo-618/aurora-polaris-chess</a>.
                 </div>
               </li>
             </ul>

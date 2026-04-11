@@ -33,8 +33,8 @@ test.describe('Game Initialization', () => {
         await expect(newGameBtn).toHaveText('New Game');
     });
 
-    test('should display default difficulty as Level 6 (Expert)', async ({ page }) => {
-        await expect(page.locator('#difficulty-choice button[data-level="6"]')).toHaveClass(/vd-is-active/);
+    test('should display default difficulty as Level 3 (Medium)', async ({ page }) => {
+        await expect(page.locator('#difficulty-choice button[data-level="3"]')).toHaveClass(/vd-is-active/);
     });
 
     test('should start new game when clicking New Game', async ({ page }) => {

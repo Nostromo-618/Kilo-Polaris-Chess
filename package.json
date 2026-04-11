@@ -1,6 +1,6 @@
 {
-  "name": "Kilo Aurora Chess",
-  "version": "2.1.0",
+  "name": "Aurora Polaris Chess",
+  "version": "2.1.1",
   "description": "A pure client-side chess game implementation that runs entirely in the browser. All computation happens on the client side, making it perfect for static hosting on GitHub Pages.",
   "directories": {
     "test": "tests"
@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nostromo-618/browser-chess-pure-js.git"
+    "url": "git+https://github.com/Nostromo-618/aurora-polaris-chess.git"
   },
   "keywords": [
     "chess",
@@ -35,9 +35,9 @@
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Nostromo-618/browser-chess-pure-js/issues"
+    "url": "https://github.com/Nostromo-618/aurora-polaris-chess/issues"
   },
-  "homepage": "https://github.com/Nostromo-618/browser-chess-pure-js#readme",
+  "homepage": "https://github.com/Nostromo-618/aurora-polaris-chess#readme",
   "devDependencies": {
     "@playwright/test": "^1.59.1"
   }

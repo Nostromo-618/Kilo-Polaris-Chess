@@ -15,13 +15,24 @@ test.describe('UI Controls', () => {
         await page.reload();
     });
 
+    async function ensureThemeCustomizerVisible(page) {
+        const customizer = page.locator('[data-theme-customizer-trigger]');
+        if (await customizer.isVisible()) return;
+
+        const menuToggle = page.locator('#mobile-menu-toggle');
+        if (await menuToggle.isVisible()) {
+            await menuToggle.click();
+        }
+        await expect(customizer).toBeVisible();
+    }
+
     test.describe('Theme Switching', () => {
         test('should have theme customizer button visible', async ({ page }) => {
-            const themeBtn = page.locator('[data-theme-customizer-trigger]');
-            await expect(themeBtn).toBeVisible();
+            await ensureThemeCustomizerVisible(page);
         });
 
         test('should open theme customizer when button clicked', async ({ page }) => {
+            await ensureThemeCustomizerVisible(page);
             await page.click('[data-theme-customizer-trigger]');
             // The Vanduo theme customizer uses a dynamic panel
             const panel = page.locator('.vd-theme-customizer-panel');
@@ -117,20 +128,20 @@ test.describe('UI Controls', () => {
         });
     });
 
-    test.describe('Maximum Thinking Time', () => {
-        test('should have preset thinking time buttons', async ({ page }) => {
-            const group = page.locator('#thinking-choice');
-            await expect(group).toBeVisible();
-            await expect(group.locator('button[data-time]')).toHaveCount(5);
+    test.describe('Pawn Promotion Selector', () => {
+        test('should provide four promotion options', async ({ page }) => {
+            const select = page.locator('#promotion-piece-select');
+            await expect(select).toBeVisible();
+            await expect(select.locator('option')).toHaveCount(4);
         });
 
-        test('should default to 30 seconds', async ({ page }) => {
-            await expect(page.locator('#thinking-choice button[data-time="30"]')).toHaveClass(/vd-is-active/);
+        test('should default to queen', async ({ page }) => {
+            await expect(page.locator('#promotion-piece-select')).toHaveValue('Q');
         });
 
-        test('should allow changing thinking time', async ({ page }) => {
-            await page.locator('#thinking-choice button[data-time="5"]').click();
-            await expect(page.locator('#thinking-choice button[data-time="5"]')).toHaveClass(/vd-is-active/);
+        test('should allow changing selected promotion piece', async ({ page }) => {
+            await page.selectOption('#promotion-piece-select', 'N');
+            await expect(page.locator('#promotion-piece-select')).toHaveValue('N');
         });
     });
 });

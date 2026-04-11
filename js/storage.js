@@ -1,7 +1,7 @@
 /**
  * storage.js
  *
- * Centralised localStorage manager for Kilo Aurora Chess.
+ * Centralised localStorage manager for Aurora Polaris Chess.
  * All keys are namespaced under "kpc-" to avoid collisions.
  *
  * Keys:
@@ -18,7 +18,6 @@ const KEYS = {
   DISCLAIMER: 'kpc-disclaimer-accepted',
   THEME: 'kpc-theme',
   DIFFICULTY: 'kpc-difficulty',
-  THINKING_TIME: 'kpc-thinking-time',
   GAME: 'kpc-game',
   BOARD_SIZE: 'kpc-board-size',
   COLOR: 'kpc-color',
@@ -189,27 +188,6 @@ export function setGame(serialized) {
 /** Remove any saved in-progress game. */
 export function clearGame() {
   remove(KEYS.GAME);
-}
-
-// ── Maximum thinking time ─────────────────────────────────────────────────────
-
-/**
- * @returns {number|null} seconds (1-60), or null if not set
- */
-export function getThinkingTime() {
-  const raw = read(KEYS.THINKING_TIME);
-  if (raw === null) return null;
-  const n = Number(raw);
-  if (Number.isNaN(n) || n < 1 || n > 60) return null;
-  return n;
-}
-
-/**
- * @param {number} seconds 1-60
- */
-export function setThinkingTime(seconds) {
-  const clamped = Math.max(1, Math.min(60, Number(seconds) || 30));
-  write(KEYS.THINKING_TIME, String(clamped));
 }
 
 // ── Desktop board size (range 0–100) ─────────────────────────────────────────

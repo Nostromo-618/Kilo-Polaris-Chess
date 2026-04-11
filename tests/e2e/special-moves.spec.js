@@ -15,7 +15,6 @@ test.describe('Special Moves', () => {
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.locator('#difficulty-choice button[data-level="1"]').click();
-        await page.locator('#thinking-choice button[data-time="5"]').click();
     });
 
     /**

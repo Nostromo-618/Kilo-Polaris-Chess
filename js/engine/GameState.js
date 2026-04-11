@@ -196,13 +196,14 @@ export class GameState {
    *
    * @param {string} square
    * @param {"white"|"black"} side
+   * @param {"Q"|"R"|"B"|"N"} [promotionChoice]
    * @returns {{
    *   moved: boolean,
    *   selectedSquare: string|null,
    *   legalTargets: string[],
    * }}
    */
-  handleSelection(square, side) {
+  handleSelection(square, side, promotionChoice = "Q") {
     if (this.isGameOver()) {
       return { moved: false, selectedSquare: null, legalTargets: [] };
     }
@@ -222,9 +223,9 @@ export class GameState {
     if (piece && pieceColor === side) {
       this.selectedSquare = square;
       const allLegal = generateLegalMoves(this.asRulesState());
-      const targets = allLegal
+      const targets = [...new Set(allLegal
         .filter((m) => m.from === square)
-        .map((m) => m.to);
+        .map((m) => m.to))];
       this.cachedLegalTargets = targets;
       return {
         moved: false,
@@ -238,7 +239,14 @@ export class GameState {
       const from = this.selectedSquare;
       const to = square;
       const allLegal = generateLegalMoves(this.asRulesState());
-      const move = allLegal.find((m) => m.from === from && m.to === to);
+      const candidates = allLegal.filter((m) => m.from === from && m.to === to);
+      const normalizedPromotion = ["Q", "R", "B", "N"].includes(promotionChoice)
+        ? promotionChoice
+        : "Q";
+      const move =
+        candidates.find((m) => m.promotion === normalizedPromotion) ||
+        candidates.find((m) => !m.promotion) ||
+        candidates[0];
 
       if (move) {
         this.applyMove(move);
