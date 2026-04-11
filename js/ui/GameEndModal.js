@@ -28,7 +28,7 @@ export class GameEndModal {
     this.modal.setAttribute('aria-labelledby', 'game-end-title');
     this.modal.setAttribute('aria-modal', 'true');
     this.modal.innerHTML = `
-      <div class="vd-modal-backdrop"></div>
+      <div class="vd-modal-backdrop game-end-modal-backdrop"></div>
       <div class="vd-modal-dialog">
         <div class="vd-modal-content game-end-modal-content">
           <div class="vd-modal-header">
@@ -128,7 +128,7 @@ export class GameEndModal {
     messageEl.textContent = message;
 
     // Add appropriate class for styling
-    this.modal.className = 'game-end-modal';
+    this.modal.className = 'vd-modal game-end-modal';
     if (result.outcome === 'checkmate' && result.winner === playerColor) {
       this.modal.classList.add('game-end-modal-victory');
     } else if (result.outcome === 'checkmate') {

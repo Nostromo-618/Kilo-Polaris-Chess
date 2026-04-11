@@ -1,6 +1,6 @@
 {
   "name": "Aurora Polaris Chess",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "A pure client-side chess game implementation that runs entirely in the browser. All computation happens on the client side, making it perfect for static hosting on GitHub Pages.",
   "directories": {
     "test": "tests"

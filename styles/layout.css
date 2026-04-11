@@ -323,7 +323,7 @@
 .game-end-modal.game-end-modal-visible {
   opacity: 1;
   visibility: visible;
-  pointer-events: all;
+  pointer-events: auto;
 }
 
 .game-end-modal-backdrop {

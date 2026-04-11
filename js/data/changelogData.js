@@ -1,8 +1,30 @@
 export const CHANGELOG_ENTRIES = [
   {
-    version: "v2.1.1",
+    version: "v2.1.2",
     date: "April 11, 2026",
     latest: true,
+    columns: [
+      {
+        title: "Bug Fixes",
+        groups: [
+          {
+            title: "Mobile",
+            items: [
+              {
+                icon: "ph-device-mobile",
+                title: "Modal overlay fix",
+                body: "Fixed modals being trapped inside the mobile scroll container, causing an unresponsive dark overlay on real device browsers (Safari & Chrome).",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: "v2.1.1",
+    date: "April 11, 2026",
+    latest: false,
     columns: [
       {
         title: "Gameplay",
