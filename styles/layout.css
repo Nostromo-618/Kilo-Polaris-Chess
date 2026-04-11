@@ -332,23 +332,52 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  /* Flat dimmer — no backdrop blur (avoids glassy look on mobile) */
+  background-color: rgba(0, 0, 0, 0.65);
 }
 
-.game-end-modal-content {
+/* Opaque dialog shell — override Vanduo glass / translucent modal surfaces */
+.game-end-modal .vd-modal-dialog {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.game-end-modal .game-end-modal-content {
   position: relative;
-  background-color: var(--color-bg-elevated);
+  /* Solid surface (not theme elevated / glass) for readability */
+  background-color: var(--gray-0, #ffffff);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border-radius: var(--radius-lg);
   padding: 32px;
   max-width: 420px;
   width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   border: 1px solid var(--color-border);
   text-align: center;
   transform: scale(0.9);
   transition: transform var(--transition-fast);
   z-index: 1;
+}
+
+[data-theme="dark"] .game-end-modal .game-end-modal-content {
+  background-color: var(--gray-900, #0f172a);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .game-end-modal .game-end-modal-content {
+    background-color: var(--gray-900, #0f172a);
+  }
+}
+
+.game-end-modal .vd-modal-header,
+.game-end-modal .vd-modal-body,
+.game-end-modal .vd-modal-footer {
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .game-end-modal.game-end-modal-visible .game-end-modal-content {
