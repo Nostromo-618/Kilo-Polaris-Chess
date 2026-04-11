@@ -70,7 +70,6 @@ const dom = {
   colorChoice: document.getElementById("color-choice"),
   engineChoice: document.getElementById("engine-choice"),
   difficultyChoice: document.getElementById("difficulty-choice"),
-  promotionSelect: document.getElementById("promotion-piece-select"),
   newGameBtn: document.getElementById("new-game-btn"),
   statusText: document.getElementById("status-text"),
   turnIndicator: document.getElementById("turn-indicator"),
@@ -98,6 +97,8 @@ const dom = {
 // Initialize board view
 const boardView = new BoardView(dom.boardContainer, {
   onSquareSelected: handleSquareSelected,
+  onPromotionPicked: handlePromotionPicked,
+  onPromotionCancelled: handlePromotionCancelled,
 });
 
 // Initialize controls
@@ -105,7 +106,6 @@ const controlsView = new Controls({
   colorChoiceContainer: dom.colorChoice,
   engineChoiceContainer: dom.engineChoice,
   difficultyChoiceContainer: dom.difficultyChoice,
-  promotionSelect: dom.promotionSelect,
   newGameButton: dom.newGameBtn,
   onNewGameRequested: handleNewGameRequested,
 });
@@ -117,6 +117,8 @@ const gameEndModal = new GameEndModal(dom.gameEndModalContainer, handleNewGameRe
 let game = null;
 let isProcessingMove = false;
 let gameSaveThrottle = null;
+/** @type {{ from: string, to: string } | null} */
+let pendingPromotion = null;
 
 /** @type {import("./ui/DisclaimerModal.js").DisclaimerModal|null} */
 let disclaimerModal = null;
@@ -246,7 +248,16 @@ async function handleSquareSelected(square) {
   if (game.getCurrentTurn() !== game.getPlayerColor()) return;
   if (game.isGameOver()) return;
 
-  const result = game.handlePlayerSquareSelection(square, controlsView.getPromotionPiece());
+  // Check if the current selection + this square would be a promotion move.
+  // GameState stores the selected square internally; mirror that logic here.
+  const selectedFrom = game.state.selectedSquare;
+  if (selectedFrom && game.isPromotionMove(selectedFrom, square)) {
+    pendingPromotion = { from: selectedFrom, to: square };
+    boardView.showPromotionPicker(square, game.getPlayerColor());
+    return;
+  }
+
+  const result = game.handlePlayerSquareSelection(square, "Q");
 
   if (!result.changed) {
     boardView.updateHighlights({
@@ -258,6 +269,30 @@ async function handleSquareSelected(square) {
     return;
   }
 
+  completePlayerMove();
+}
+
+/**
+ * Called when the user picks a piece from the promotion overlay.
+ * @param {"Q"|"R"|"B"|"N"} piece
+ */
+async function handlePromotionPicked(piece) {
+  if (!game || !pendingPromotion) return;
+
+  const { to } = pendingPromotion;
+  pendingPromotion = null;
+
+  const result = game.handlePlayerSquareSelection(to, piece);
+  if (!result.changed) return;
+
+  completePlayerMove();
+}
+
+function handlePromotionCancelled() {
+  pendingPromotion = null;
+}
+
+function completePlayerMove() {
   const snapshot = game.getSnapshot();
   syncUIWithGame(snapshot);
 

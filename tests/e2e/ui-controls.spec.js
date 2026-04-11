@@ -128,20 +128,10 @@ test.describe('UI Controls', () => {
         });
     });
 
-    test.describe('Pawn Promotion Selector', () => {
-        test('should provide four promotion options', async ({ page }) => {
-            const select = page.locator('#promotion-piece-select');
-            await expect(select).toBeVisible();
-            await expect(select.locator('option')).toHaveCount(4);
-        });
-
-        test('should default to queen', async ({ page }) => {
-            await expect(page.locator('#promotion-piece-select')).toHaveValue('Q');
-        });
-
-        test('should allow changing selected promotion piece', async ({ page }) => {
-            await page.selectOption('#promotion-piece-select', 'N');
-            await expect(page.locator('#promotion-piece-select')).toHaveValue('N');
+    test.describe('Promotion Picker Overlay', () => {
+        test('should not show promotion picker initially', async ({ page }) => {
+            const picker = page.locator('.promotion-picker');
+            await expect(picker).toHaveCount(0);
         });
     });
 });

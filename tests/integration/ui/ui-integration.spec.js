@@ -140,10 +140,9 @@ test.describe('UI Integration - Controls + Game State', () => {
         expect(value).toBe('4');
     });
 
-    test('should update promotion piece when selecting option', async ({ page }) => {
-        await page.selectOption('#promotion-piece-select', 'B');
-        const active = await page.inputValue('#promotion-piece-select');
-        expect(active).toBe('B');
+    test('should not show promotion picker overlay initially', async ({ page }) => {
+        const picker = page.locator('.promotion-picker');
+        await expect(picker).toHaveCount(0);
     });
 
     test('should change color choice when clicking button', async ({ page }) => {

@@ -204,6 +204,18 @@ export class Game {
   }
 
   /**
+   * Check whether a move from `from` to `to` would be a pawn promotion.
+   * @param {string} from
+   * @param {string} to
+   * @returns {boolean}
+   */
+  isPromotionMove(from, to) {
+    if (this.isGameOver()) return false;
+    const allLegal = generateLegalMoves(this.state.asRulesState());
+    return allLegal.some(m => m.from === from && m.to === to && !!m.promotion);
+  }
+
+  /**
    * Handle user clicking a square as part of a potential move.
    * @param {string} square - algebraic coordinate, e.g. "e2"
    * @returns {{

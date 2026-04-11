@@ -4,7 +4,6 @@
  * Handles:
  * - Color selection (white / black / random)
  * - Difficulty selection (1-6)
- * - Pawn promotion preference (Q / R / B / N)
  * - Engine (built-in Kilo Aurora vs TomitankChess)
  * - New game button
  *
@@ -19,7 +18,6 @@ export class Controls {
    * @param {HTMLElement} options.colorChoiceContainer
    * @param {HTMLElement} [options.engineChoiceContainer]
    * @param {HTMLElement} options.difficultyChoiceContainer
-   * @param {HTMLSelectElement} [options.promotionSelect]
    * @param {HTMLButtonElement} options.newGameButton
    * @param {HTMLSelectElement} [options.difficultySelect]
    * @param {() => void} options.onNewGameRequested
@@ -28,7 +26,6 @@ export class Controls {
     colorChoiceContainer,
     engineChoiceContainer,
     difficultyChoiceContainer,
-    promotionSelect,
     newGameButton,
     difficultySelect,
     onNewGameRequested,
@@ -36,7 +33,6 @@ export class Controls {
     this.colorChoiceContainer = colorChoiceContainer;
     this.engineChoiceContainer = engineChoiceContainer || null;
     this.difficultyChoiceContainer = difficultyChoiceContainer;
-    this.promotionSelect = promotionSelect || null;
     this.newGameButton = newGameButton;
     this.difficultySelect = difficultySelect || null;
     this.onNewGameRequested = onNewGameRequested || (() => { });
@@ -45,12 +41,10 @@ export class Controls {
     /** @type {"builtin"|"tomitank"} */
     this.selectedEngine = "tomitank";
     this.selectedDifficulty = 3;
-    this.selectedPromotion = "Q";
 
     this.handleColorClick = this.handleColorClick.bind(this);
     this.handleEngineClick = this.handleEngineClick.bind(this);
     this.handleDifficultyClick = this.handleDifficultyClick.bind(this);
-    this.handlePromotionChange = this.handlePromotionChange.bind(this);
     this.handleNewGameClick = this.handleNewGameClick.bind(this);
 
     this.init();
@@ -77,11 +71,6 @@ export class Controls {
 
     if (this.difficultyChoiceContainer) {
       this.difficultyChoiceContainer.addEventListener("click", this.handleDifficultyClick);
-    }
-
-    if (this.promotionSelect) {
-      this.promotionSelect.addEventListener("change", this.handlePromotionChange);
-      this.promotionSelect.value = this.selectedPromotion;
     }
 
     if (this.newGameButton) {
@@ -187,14 +176,6 @@ export class Controls {
     target.classList.add("vd-is-active");
   }
 
-  handlePromotionChange(event) {
-    const target = event.target;
-    if (!(target instanceof HTMLSelectElement)) return;
-    const promotion = target.value;
-    if (!["Q", "R", "B", "N"].includes(promotion)) return;
-    this.selectedPromotion = promotion;
-  }
-
   handleNewGameClick() {
     this.onNewGameRequested();
   }
@@ -262,12 +243,4 @@ export class Controls {
     });
   }
 
-  /**
-   * @returns {"Q"|"R"|"B"|"N"}
-   */
-  getPromotionPiece() {
-    return ["Q", "R", "B", "N"].includes(this.selectedPromotion)
-      ? this.selectedPromotion
-      : "Q";
-  }
 }

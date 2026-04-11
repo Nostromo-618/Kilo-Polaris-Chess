@@ -46,14 +46,9 @@ test.describe('Security - Input Validation', () => {
         expect(Number(level)).toBeLessThanOrEqual(6);
     });
 
-    test('should validate promotion selector input from DOM', async ({ page }) => {
-        const value = await page.evaluate(() => {
-            const select = document.querySelector('#promotion-piece-select');
-            if (!select) return null;
-            select.value = 'INVALID';
-            return select.value;
-        });
-        expect(['Q', 'R', 'B', 'N']).toContain(value);
+    test('should not have promotion selector in DOM', async ({ page }) => {
+        const select = await page.locator('#promotion-piece-select');
+        await expect(select).toHaveCount(0);
     });
 });
 

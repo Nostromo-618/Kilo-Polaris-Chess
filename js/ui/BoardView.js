@@ -41,14 +41,18 @@ export class BoardView {
    * @param {HTMLElement} container - container element for the board.
    * @param {Object} callbacks
    * @param {(square: string) => void} callbacks.onSquareSelected
+   * @param {(piece: "Q"|"R"|"B"|"N") => void} [callbacks.onPromotionPicked]
+   * @param {() => void} [callbacks.onPromotionCancelled]
    */
-  constructor(container, { onSquareSelected } = {}) {
+  constructor(container, { onSquareSelected, onPromotionPicked, onPromotionCancelled } = {}) {
     if (!container) {
       throw new Error("BoardView: container element is required.");
     }
 
     this.container = container;
     this.onSquareSelected = onSquareSelected || (() => {});
+    this.onPromotionPicked = onPromotionPicked || (() => {});
+    this.onPromotionCancelled = onPromotionCancelled || (() => {});
 
     /** @type {Map<string, HTMLElement>} */
     this.squareEls = new Map();
@@ -63,8 +67,10 @@ export class BoardView {
     this.legalTargets = new Set();
     this.lastMove = null;
     this.currentPerspective = "white";
+    this.promotionPending = false;
 
     this.handleSquareClick = this.handleSquareClick.bind(this);
+    this._handlePromotionKeydown = this._handlePromotionKeydown.bind(this);
 
     this.initBoard();
   }
@@ -309,10 +315,117 @@ export class BoardView {
    * Translates DOM event into algebraic square and forwards to callback.
    */
   handleSquareClick(event) {
+    if (this.promotionPending) return;
     const squareEl = event.currentTarget;
     const square = squareEl.dataset.square;
     if (!square) return;
     this.onSquareSelected(square);
+  }
+
+  /**
+   * Show the promotion piece picker overlay on the board.
+   * Displays a column of 4 piece icons (Q, R, B, N) anchored to the
+   * promotion square, extending toward the player.
+   *
+   * @param {string} square - destination square (e.g. "e8")
+   * @param {"white"|"black"} color - color of the promoting side
+   */
+  showPromotionPicker(square, color) {
+    this.hidePromotionPicker();
+    this.promotionPending = true;
+
+    const boardGrid = this.container.querySelector(".chess-board-grid");
+    if (!boardGrid) return;
+
+    const perspective = this.currentPerspective;
+    const file = square[0];
+    const rank = Number(square[1]);
+    const pieces = ["Q", "R", "B", "N"];
+    const prefix = color === "white" ? "w" : "b";
+
+    const files = perspective === "white"
+      ? ["a", "b", "c", "d", "e", "f", "g", "h"]
+      : ["h", "g", "f", "e", "d", "c", "b", "a"];
+    const ranks = perspective === "white"
+      ? [8, 7, 6, 5, 4, 3, 2, 1]
+      : [1, 2, 3, 4, 5, 6, 7, 8];
+
+    const colIndex = files.indexOf(file);
+    const rowIndex = ranks.indexOf(rank);
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "promotion-picker-backdrop";
+    backdrop.addEventListener("click", () => this._cancelPromotion());
+
+    const picker = document.createElement("div");
+    picker.className = "promotion-picker";
+    picker.style.left = `${colIndex * 12.5}%`;
+    picker.style.top = `${rowIndex * 12.5}%`;
+    picker.setAttribute("role", "listbox");
+    picker.setAttribute("aria-label", "Choose promotion piece");
+
+    for (let i = 0; i < pieces.length; i++) {
+      const piece = pieces[i];
+      const code = `${prefix}${piece}`;
+
+      const option = document.createElement("div");
+      option.className = "promotion-picker-option";
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-label", PIECE_DESCRIPTIONS[code] || code);
+      option.dataset.piece = piece;
+
+      const img = document.createElement("img");
+      img.src = getPieceImageUrl(code);
+      img.alt = PIECE_DESCRIPTIONS[code] || code;
+      img.classList.add("promotion-picker-img");
+      img.draggable = false;
+      option.appendChild(img);
+
+      option.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.hidePromotionPicker();
+        this.onPromotionPicked(piece);
+      });
+
+      picker.appendChild(option);
+    }
+
+    boardGrid.appendChild(backdrop);
+    boardGrid.appendChild(picker);
+
+    this._promotionBackdrop = backdrop;
+    this._promotionPicker = picker;
+
+    document.addEventListener("keydown", this._handlePromotionKeydown);
+  }
+
+  /**
+   * Remove the promotion picker overlay if present.
+   */
+  hidePromotionPicker() {
+    this.promotionPending = false;
+    if (this._promotionBackdrop) {
+      this._promotionBackdrop.remove();
+      this._promotionBackdrop = null;
+    }
+    if (this._promotionPicker) {
+      this._promotionPicker.remove();
+      this._promotionPicker = null;
+    }
+    document.removeEventListener("keydown", this._handlePromotionKeydown);
+  }
+
+  /** @private */
+  _cancelPromotion() {
+    this.hidePromotionPicker();
+    this.onPromotionCancelled();
+  }
+
+  /** @private */
+  _handlePromotionKeydown(e) {
+    if (e.key === "Escape") {
+      this._cancelPromotion();
+    }
   }
 }
 
