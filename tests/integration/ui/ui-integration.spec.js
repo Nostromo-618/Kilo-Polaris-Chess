@@ -32,19 +32,12 @@ test.describe('UI Integration - BoardView + Game State', () => {
     });
 
     test('should update turn indicator after move', async ({ page }) => {
-        // Get initial turn
         const initialTurn = await page.locator('#turn-indicator').textContent();
 
-        // Make a move
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
 
-        // Wait for turn to update
-        await page.waitForTimeout(500);
-
-        const newTurn = await page.locator('#turn-indicator').textContent();
-
-        expect(initialTurn).not.toBe(newTurn);
+        await expect(page.locator('#turn-indicator')).not.toHaveText(initialTurn);
     });
 
     test('should highlight legal moves when piece selected', async ({ page }) => {
@@ -126,8 +119,10 @@ test.describe('UI Integration - Controls + Game State', () => {
 
     test('should start new game when clicking New Game button', async ({ page }) => {
         await page.click('#new-game-btn');
+        await page.waitForFunction(() =>
+            document.querySelectorAll('.chess-piece.has-piece').length === 32
+        );
 
-        // Verify board is set up - 32 occupied squares (64 total .chess-piece divs)
         const pieces = await page.locator('.chess-piece.has-piece').count();
         expect(pieces).toBe(32);
     });
@@ -158,15 +153,14 @@ test.describe('UI Integration - Controls + Game State', () => {
     });
 
     test('should start game with selected color', async ({ page }) => {
-        // Select black
         await page.click('#color-choice button[data-color="black"]');
         await page.click('#new-game-btn');
 
-        // Wait for game to start
-        await page.waitForSelector('.chess-piece');
+        await page.waitForFunction(() =>
+            document.querySelectorAll('.chess-piece.has-piece').length === 32
+        );
 
-        // Verify board is flipped (a8 should be at bottom-left)
-        const a8Element = await page.locator('.chess-square[data-square="a8"]');
+        const a8Element = page.locator('.chess-square[data-square="a8"]');
         const a8Order = await a8Element.evaluate(el => window.getComputedStyle(el).order);
 
         expect(parseInt(a8Order)).toBeGreaterThan(32);
@@ -175,7 +169,7 @@ test.describe('UI Integration - Controls + Game State', () => {
     test('should save difficulty to localStorage', async ({ page }) => {
         await page.locator('#difficulty-choice button[data-level="5"]').click();
         await page.click('#new-game-btn');
-        await page.waitForTimeout(300);
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const saved = await page.evaluate(() => localStorage.getItem('kpc-difficulty'));
         expect(saved).toBe('5');
@@ -215,19 +209,13 @@ test.describe('UI Integration - Modal Dialogs', () => {
     });
 
     test('should hide disclaimer after accept', async ({ page }) => {
-        // Clear and reload
         await page.evaluate(() => localStorage.clear());
         await page.reload();
 
-        // Accept disclaimer
         await page.click('#disclaimer-accept-btn');
-        await page.waitForTimeout(500);
 
-        // Verify modal hidden
-        const modal = await page.locator('#disclaimer-modal');
-        const isVisible = await modal.isVisible();
-
-        expect(isVisible).toBe(false);
+        const modal = page.locator('#disclaimer-modal');
+        await expect(modal).not.toHaveClass(/is-open/);
     });
 
     test('should not show disclaimer on subsequent visits', async ({ page }) => {
@@ -244,28 +232,24 @@ test.describe('UI Integration - Modal Dialogs', () => {
         await page.evaluate(() => localStorage.clear());
         await page.reload();
 
-        // Press ESC
+        const modal = page.locator('#disclaimer-modal');
+        await expect(modal).toHaveClass(/is-open/);
+
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
 
-        const modal = await page.locator('#disclaimer-modal');
-        const isVisible = await modal.isVisible();
-
-        expect(isVisible).toBe(true);
+        await expect(modal).toHaveClass(/is-open/);
     });
 
     test('should prevent closing disclaimer with backdrop click', async ({ page }) => {
         await page.evaluate(() => localStorage.clear());
         await page.reload();
 
-        // Click backdrop
+        const modal = page.locator('#disclaimer-modal');
+        await expect(modal).toHaveClass(/is-open/);
+
         await page.mouse.click(10, 10);
-        await page.waitForTimeout(300);
 
-        const modal = await page.locator('#disclaimer-modal');
-        const isVisible = await modal.isVisible();
-
-        expect(isVisible).toBe(true);
+        await expect(modal).toHaveClass(/is-open/);
     });
 });
 
@@ -377,16 +361,10 @@ test.describe('UI Integration - Status Display', () => {
     test('should update status after move', async ({ page }) => {
         const initialStatus = await page.locator('#status-text').textContent();
 
-        // Make a move
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
 
-        await page.waitForTimeout(500);
-
-        const newStatus = await page.locator('#status-text').textContent();
-
-        // Status should change
-        expect(initialStatus).not.toBe(newStatus);
+        await expect(page.locator('#status-text')).not.toHaveText(initialStatus);
     });
 
     test('should show check in status', async ({ page }) => {

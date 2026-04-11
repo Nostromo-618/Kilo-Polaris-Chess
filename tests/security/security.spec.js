@@ -36,8 +36,8 @@ test.describe('Security - Input Validation', () => {
     test('should validate difficulty input', async ({ page }) => {
         await page.evaluate(() => localStorage.setItem('kpc-difficulty', '999'));
         await page.reload();
-        await page.waitForTimeout(200);
 
+        await page.waitForSelector('#difficulty-choice button.vd-is-active');
         const level = await page.evaluate(() =>
             document.querySelector('#difficulty-choice button.vd-is-active')?.getAttribute('data-level')
         );
@@ -66,7 +66,6 @@ test.describe('Security - XSS Prevention', () => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Try to inject script via localStorage
         await page.evaluate(() => {
             localStorage.setItem('kpc-game', JSON.stringify({
                 board: new Array(64).fill(null),
@@ -76,9 +75,8 @@ test.describe('Security - XSS Prevention', () => {
         });
 
         await page.reload();
-        await page.waitForTimeout(500);
+        await page.waitForSelector('#board-container');
 
-        // Move history uses textContent (no HTML injection); no script nodes in the list
         await expect(page.locator('#move-history script')).toHaveCount(0);
         const historyText = await page.locator('#move-history').textContent();
         expect(historyText).toBeTruthy();
@@ -88,7 +86,6 @@ test.describe('Security - XSS Prevention', () => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Try to inject via game state
         await page.evaluate(() => {
             localStorage.setItem('kpc-game', JSON.stringify({
                 board: new Array(64).fill(null),
@@ -98,9 +95,8 @@ test.describe('Security - XSS Prevention', () => {
         });
 
         await page.reload();
-        await page.waitForTimeout(500);
+        await page.waitForSelector('#board-container');
 
-        // Should not execute
         const statusText = await page.locator('#status-text').textContent();
         expect(statusText).not.toContain('<img');
     });
@@ -155,15 +151,13 @@ test.describe('Security - Storage Security', () => {
     });
 
     test('should validate stored data on load', async ({ page }) => {
-        // Store corrupted data
         await page.evaluate(() => {
             localStorage.setItem('kpc-game', 'invalid json');
         });
 
         await page.reload();
-        await page.waitForTimeout(500);
+        await page.waitForSelector('#board-container');
 
-        // Should handle gracefully and start new game
         const pieces = await page.locator('.chess-piece').count();
         expect(pieces).toBeGreaterThanOrEqual(0);
     });
@@ -190,7 +184,6 @@ test.describe('Security - Storage Security', () => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Make a move to save
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
 
@@ -199,11 +192,9 @@ test.describe('Security - Storage Security', () => {
             return t.includes('Your move');
         }, { timeout: 30000 });
 
-        // Start new game (must not run while AI is thinking or the handler no-ops)
         await page.click('#new-game-btn');
-        await page.waitForTimeout(300);
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Check if game state was reset
         const saved = await page.evaluate(() => localStorage.getItem('kpc-game'));
         if (saved) {
             const parsed = JSON.parse(saved);

@@ -51,22 +51,22 @@ test.describe('Disclaimer Modal', () => {
     test('cannot be closed with ESC key', async ({ page }) => {
         await freshPage(page);
 
-        await page.keyboard.press('Escape');
-        // Small wait for any animation
-        await page.waitForTimeout(300);
-
         const modal = page.locator('#disclaimer-modal');
+        await expect(modal).toHaveClass(/is-open/);
+
+        await page.keyboard.press('Escape');
+
         await expect(modal).toHaveClass(/is-open/);
     });
 
     test('cannot be closed by clicking the backdrop', async ({ page }) => {
         await freshPage(page);
 
-        // Click outside the dialog (the backdrop area)
-        await page.mouse.click(10, 10);
-        await page.waitForTimeout(300);
-
         const modal = page.locator('#disclaimer-modal');
+        await expect(modal).toHaveClass(/is-open/);
+
+        await page.mouse.click(10, 10);
+
         await expect(modal).toHaveClass(/is-open/);
     });
 
@@ -74,9 +74,7 @@ test.describe('Disclaimer Modal', () => {
         await freshPage(page);
 
         await page.click('#disclaimer-accept-btn');
-        await page.waitForTimeout(400);
 
-        // Modal should be hidden
         const modal = page.locator('#disclaimer-modal');
         await expect(modal).not.toHaveClass(/is-open/);
 
@@ -88,11 +86,9 @@ test.describe('Disclaimer Modal', () => {
     test('does NOT show on subsequent visits', async ({ page }) => {
         await acceptedPage(page);
 
-        // Wait for app to finish loading
-        await page.waitForTimeout(500);
+        await page.waitForSelector('#board-container');
 
         const modal = page.locator('#disclaimer-modal');
-        // Modal element may or may not exist; if it does it must not be open
         const exists = await modal.count();
         if (exists > 0) {
             await expect(modal).not.toHaveClass(/is-open/);
@@ -104,11 +100,9 @@ test.describe('LocalStorage: Difficulty Persistence', () => {
     test('saves selected difficulty to localStorage', async ({ page }) => {
         await acceptedPage(page);
 
-        // Select difficulty 4
         await page.locator('#difficulty-choice button[data-level="4"]').click();
-        // Trigger a new game to persist
         await page.click('#new-game-btn');
-        await page.waitForTimeout(300);
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         const saved = await page.evaluate(() => localStorage.getItem('kpc-difficulty'));
         expect(saved).toBe('4');
@@ -117,15 +111,10 @@ test.describe('LocalStorage: Difficulty Persistence', () => {
     test('restores saved difficulty on page reload', async ({ page }) => {
         await acceptedPage(page);
 
-        // Save a difficulty value directly
         await page.evaluate(() => localStorage.setItem('kpc-difficulty', '5'));
         await page.reload();
-        await page.waitForTimeout(500);
 
-        const activeLevel = await page.evaluate(() =>
-            document.querySelector('#difficulty-choice button.vd-is-active')?.getAttribute('data-level')
-        );
-        expect(activeLevel).toBe('5');
+        await expect(page.locator('#difficulty-choice button[data-level="5"]')).toHaveClass(/vd-is-active/);
     });
 });
 
@@ -138,7 +127,12 @@ test.describe('LocalStorage: Game Progress', () => {
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
-        await page.waitForTimeout(500);
+
+        await page.waitForFunction(() => {
+            const raw = localStorage.getItem('kpc-game');
+            if (!raw) return false;
+            try { return JSON.parse(raw).board != null; } catch { return false; }
+        }, { timeout: 5000 });
 
         const saved = await page.evaluate(() => localStorage.getItem('kpc-game'));
         expect(saved).not.toBeNull();
@@ -156,13 +150,11 @@ test.describe('LocalStorage: Game Progress', () => {
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
         await page.click('.chess-square[data-square="e2"]');
         await page.click('.chess-square[data-square="e4"]');
-        await page.waitForTimeout(600);
 
-        // Reload and verify board is present
+        await expect(page.locator('#move-history')).toContainText('e2-e4');
+
         await page.reload();
-        await page.waitForTimeout(600);
 
-        // Chess board should be rendered (pieces visible)
         const pieces = page.locator('.chess-piece');
         await expect(pieces.first()).toBeVisible();
     });
@@ -180,13 +172,10 @@ test.describe('LocalStorage: Game Progress', () => {
             return t.includes('Your move');
         }, { timeout: 30000 });
 
-        // Start another new game — should clear and re-save
         await page.click('#new-game-btn');
-        await page.waitForTimeout(500);
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // After new game, a fresh game state should be in storage
         const saved = await page.evaluate(() => localStorage.getItem('kpc-game'));
-        // Could be null (cleared) or a new state — but the move history should be empty
         if (saved) {
             const parsed = JSON.parse(saved);
             expect(parsed.moveHistory).toHaveLength(0);
@@ -196,7 +185,6 @@ test.describe('LocalStorage: Game Progress', () => {
     test('completed game clears saved progress', async ({ page }) => {
         await acceptedPage(page);
 
-        // Simulate a game over by injecting a terminal state into localStorage
         const terminalState = {
             board: new Array(64).fill(null),
             activeColor: 'white',
@@ -216,9 +204,8 @@ test.describe('LocalStorage: Game Progress', () => {
         }, terminalState);
 
         await page.reload();
-        await page.waitForTimeout(600);
+        await page.waitForSelector('#board-container');
 
-        // The game is over — storage should have been cleared
         const saved = await page.evaluate(() => localStorage.getItem('kpc-game'));
         expect(saved).toBeNull();
     });
