@@ -60,12 +60,18 @@ for (let i = 0; i < PIECE_CODES.length; i++) {
   PIECE_INDEX[PIECE_CODES[i]] = i;
 }
 
-// Pre-computed random 64-bit BigInt values for Zobrist hashing
-// 12 piece types * 64 squares = 768 values
+// Pre-computed deterministic 64-bit BigInt values for Zobrist hashing.
+// A fixed SplitMix64 stream keeps hashes stable across reloads/tests while
+// still giving the table a good distribution.
+const MASK_64 = (1n << 64n) - 1n;
+let zobristSeed = 0x4d595df4d0f33173n;
+
 function random64() {
-  // Generate 64-bit random BigInt
-  return BigInt(Math.floor(Math.random() * 0xFFFFFFFF)) | 
-         (BigInt(Math.floor(Math.random() * 0xFFFFFFFF)) << 32n);
+  zobristSeed = (zobristSeed + 0x9e3779b97f4a7c15n) & MASK_64;
+  let z = zobristSeed;
+  z = ((z ^ (z >> 30n)) * 0xbf58476d1ce4e5b9n) & MASK_64;
+  z = ((z ^ (z >> 27n)) * 0x94d049bb133111ebn) & MASK_64;
+  return (z ^ (z >> 31n)) & MASK_64;
 }
 
 const ZOBRIST_PIECES = new Array(12);
@@ -628,6 +634,30 @@ export class AI {
     // Transposition table - default size, resized for Level 6
     this.ttSize = TT_MAX_SIZE_DEFAULT;
     this.transpositionTable = new Array(TT_MAX_SIZE_DEFAULT);
+
+    this.lastSearchInfo = this.createSearchInfo();
+    this.lastRootScore = undefined;
+  }
+
+  createSearchInfo() {
+    return {
+      nodes: 0,
+      qNodes: 0,
+      ttHits: 0,
+      cutoffs: 0,
+      depthCompleted: 0,
+      bestScore: null,
+      timedOut: false,
+    };
+  }
+
+  resetSearchInfo() {
+    this.lastSearchInfo = this.createSearchInfo();
+    this.lastRootScore = undefined;
+  }
+
+  getLastSearchInfo() {
+    return { ...this.lastSearchInfo };
   }
 
   /**
@@ -750,11 +780,20 @@ export class AI {
     const index = Number(key % BigInt(this.ttSize));
     const entry = this.transpositionTable[index];
     
-    if (!entry || entry.depth < depth) return null;
+    if (!entry || entry.key !== key || entry.depth < depth) return null;
 
-    if (entry.flag === TT_EXACT) return entry.score;
-    if (entry.flag === TT_LOWER && entry.score >= beta) return entry.score;
-    if (entry.flag === TT_UPPER && entry.score <= alpha) return entry.score;
+    if (entry.flag === TT_EXACT) {
+      this.lastSearchInfo.ttHits += 1;
+      return entry.score;
+    }
+    if (entry.flag === TT_LOWER && entry.score >= beta) {
+      this.lastSearchInfo.ttHits += 1;
+      return entry.score;
+    }
+    if (entry.flag === TT_UPPER && entry.score <= alpha) {
+      this.lastSearchInfo.ttHits += 1;
+      return entry.score;
+    }
     return null;
   }
 
@@ -764,7 +803,7 @@ export class AI {
   probeTTMove(key) {
     const index = Number(key % BigInt(this.ttSize));
     const entry = this.transpositionTable[index];
-    if (!entry) return null;
+    if (!entry || entry.key !== key) return null;
     return entry.bestMove || null;
   }
 
@@ -772,8 +811,8 @@ export class AI {
     const index = Number(key % BigInt(this.ttSize));
     const existing = this.transpositionTable[index];
     
-    // Always replace if existing entry is shallower or equal
-    if (!existing || existing.depth <= depth) {
+    // Replace colliding keys, or refresh equal/deeper entries for the same key.
+    if (!existing || existing.key !== key || existing.depth <= depth) {
       this.transpositionTable[index] = { key, depth, score, flag, bestMove };
     }
   }
@@ -781,7 +820,10 @@ export class AI {
   /**
    * Top-level API used by Game.
    */
-  async findBestMove(gameState, { level, forColor, timeout = 10000 }) {
+  async findBestMove(gameState, { level, forColor, timeout = 10000, signal, onInfo } = {}) {
+    if (signal?.aborted) return null;
+    this.resetSearchInfo();
+
     const clampedLevel = Math.max(1, Math.min(6, Number(level) || 1));
     const depth = this.depthForLevel[clampedLevel];
 
@@ -789,21 +831,30 @@ export class AI {
     this.resizeTT(clampedLevel);
 
     const baseState = new SearchState(gameState);
+    const searchColor = forColor || baseState.activeColor;
     const legalMoves = generateLegalMoves(baseState);
     if (legalMoves.length === 0) return null;
 
     if (clampedLevel === 1) {
-      return this.pickLevel1Move(baseState, legalMoves, forColor);
+      const move = this.pickLevel1Move(baseState, legalMoves, searchColor);
+      this.lastSearchInfo.depthCompleted = 1;
+      onInfo?.(this.getLastSearchInfo());
+      return signal?.aborted ? null : move;
     }
 
     if (clampedLevel >= 2) {
-      return this.progressiveDeepeningSearch(baseState, legalMoves, depth, forColor, clampedLevel, timeout);
+      const move = await this.progressiveDeepeningSearch(baseState, legalMoves, depth, searchColor, clampedLevel, timeout, signal, onInfo);
+      onInfo?.(this.getLastSearchInfo());
+      return signal?.aborted ? null : move;
     }
 
     return new Promise((resolve) => {
-      const move = this.searchRoot(baseState, legalMoves, depth, forColor, {
+      const move = this.searchRoot(baseState, legalMoves, depth, searchColor, {
         level: clampedLevel,
+        timeout,
+        startTime: Date.now(),
       });
+      onInfo?.(this.getLastSearchInfo());
       resolve(move);
     });
   }
@@ -834,8 +885,8 @@ export class AI {
 
     let bestMove = ordered[0];
     let bestScore = isMaximizing ? -Infinity : Infinity;
-    let alpha = -Infinity;
-    let beta = Infinity;
+    let alpha = -1000000;
+    let beta = 1000000;
 
     // Aspiration windows: tighter for Level 6
     const ASPIRATION_WINDOW = level >= 6 ? 25 : 50;
@@ -852,26 +903,31 @@ export class AI {
       let currentAlpha = alpha;
       let currentBeta = beta;
       let scoreOutsideWindow = false;
+      let searchedAny = false;
 
       for (const move of ordered) {
-        if (timeout && startTime && Date.now() - startTime >= timeout) break;
+        if (timeout && startTime && Date.now() - startTime >= timeout) {
+          this.lastSearchInfo.timedOut = true;
+          break;
+        }
 
-        const next = state.clone();
-        applyMoveSearch(next, move, state.activeColor);
+        state.makeMove(move);
         const score = this.minimax(
-          next, depth - 1, currentAlpha, currentBeta, color, !isMaximizing, level, timeout, startTime
+          state, depth - 1, currentAlpha, currentBeta, color, !isMaximizing, level, timeout, startTime
         );
+        state.undoMove();
 
         if (score === null) break;
+        searchedAny = true;
 
         // Check if score fell outside aspiration window
         if (score <= currentAlpha) {
           scoreOutsideWindow = true;
-          currentAlpha = -Infinity;
+          currentAlpha = -1000000;
         }
         if (score >= currentBeta) {
           scoreOutsideWindow = true;
-          currentBeta = Infinity;
+          currentBeta = 1000000;
         }
 
         if (isMaximizing) {
@@ -882,10 +938,13 @@ export class AI {
           if (score < currentBeta) currentBeta = score;
         }
 
-        if (currentBeta <= currentAlpha) break;
+        if (currentBeta <= currentAlpha) {
+          this.lastSearchInfo.cutoffs += 1;
+          break;
+        }
       }
 
-      if (!scoreOutsideWindow) {
+      if (!searchedAny || !scoreOutsideWindow) {
         searchComplete = true;
       } else {
         // Progressive widening for Level 6
@@ -897,13 +956,19 @@ export class AI {
             alpha = previousBestScore - w;
             beta = previousBestScore + w;
           } else {
-            alpha = -Infinity;
-            beta = Infinity;
+            alpha = -1000000;
+            beta = 1000000;
           }
+        } else {
+          alpha = -1000000;
+          beta = 1000000;
         }
       }
       attempt++;
     }
+
+    this.lastRootScore = Number.isFinite(bestScore) ? bestScore : undefined;
+    this.lastSearchInfo.bestScore = Number.isFinite(bestScore) ? bestScore : null;
 
     // Slight randomness (zero for Level 6)
     if (!(timeout && startTime && Date.now() - startTime >= timeout)) {
@@ -929,170 +994,131 @@ export class AI {
     return bestMove;
   }
 
+  computeReduction(level, depth, moveIndex, move, inCheck) {
+    if (inCheck || move.captured || move.promotion || move.isEnPassant) return 0;
+    if (this.isKillerMove(move, depth) || this.getHistoryScore(move) > 500) return 0;
+
+    if (level >= 6 && depth >= 3 && moveIndex >= 3) {
+      const reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(moveIndex + 1) / 2.5));
+      return Math.min(reduction, depth - 2);
+    }
+    if (level >= 5 && depth >= 3 && moveIndex >= 4) {
+      return moveIndex >= 8 ? 2 : 1;
+    }
+    return 0;
+  }
+
   minimax(state, depth, alpha, beta, rootColor, isMaximizing, level, timeout, startTime, allowNullMove = true) {
-    if (timeout && startTime && Date.now() - startTime >= timeout) return null;
+    if (timeout && startTime && Date.now() - startTime >= timeout) {
+      this.lastSearchInfo.timedOut = true;
+      return null;
+    }
 
+    this.lastSearchInfo.nodes += 1;
+
+    const maximizing = state.activeColor === rootColor;
     const originalAlpha = alpha;
+    const originalBeta = beta;
 
-    // Transposition table lookup (only at level 3+)
+    const inCheck = isInCheck(state);
+    if (inCheck && depth > 0) {
+      depth += 1;
+    }
+
+    if (depth <= 0) {
+      const qScore = level >= 4
+        ? this.quiescence(state, alpha, beta, rootColor, evaluate(state, rootColor), timeout, startTime, level)
+        : evaluate(state, rootColor);
+      return qScore === null ? evaluate(state, rootColor) : qScore;
+    }
+
     const ttKey = level >= 3 ? state.hash : null;
     let ttBestMove = null;
     if (ttKey) {
       const ttScore = this.probeTable(ttKey, depth, alpha, beta);
       if (ttScore !== null) return ttScore;
-      // Get TT best move for ordering even if score isn't usable
       ttBestMove = this.probeTTMove(ttKey);
     }
 
-    const inCheck = isInCheck(state);
     const legalMoves = generateLegalMoves(state);
-
-    // Check extension: extend search by 1 ply when in check
-    if (inCheck && depth > 0) {
-      depth += 1;
+    if (legalMoves.length === 0) {
+      if (inCheck) {
+        return state.activeColor === rootColor ? -100000 - depth : 100000 + depth;
+      }
+      return 0;
     }
 
-    if (depth <= 0 || legalMoves.length === 0) {
-      let baseScore = evaluate(state, rootColor);
+    const staticEval = evaluate(state, rootColor);
 
-      if (legalMoves.length === 0) {
-        baseScore = inCheck
-          ? (state.activeColor === rootColor ? -100000 : 100000)
-          : 0;
-      }
-
-      if (depth <= 0 && level >= 4) {
-        const qScore = this.quiescence(state, alpha, beta, rootColor, baseScore, timeout, startTime, level);
-        if (qScore === null) return baseScore;
-        return qScore;
-      }
-
-      return baseScore;
-    }
-
-    // === Reverse Futility Pruning (Static Null Move Pruning) ===
-    // At expected cut-nodes: if static eval - margin >= beta, prune
     if (level >= 6 && !inCheck && depth <= 3 && allowNullMove) {
-      const staticEval = evaluate(state, rootColor);
       const rfpMargin = RFP_MARGINS[depth] || 0;
-      if (isMaximizing && staticEval - rfpMargin >= beta) {
-        return beta;
-      }
-      if (!isMaximizing && staticEval + rfpMargin <= alpha) {
-        return alpha;
-      }
+      if (maximizing && staticEval - rfpMargin >= beta) return beta;
+      if (!maximizing && staticEval + rfpMargin <= alpha) return alpha;
     }
 
-    // Null move pruning
-    if (allowNullMove && !inCheck && depth >= 3 && level >= 4) {
-      const pieceCount = this.countPieces(state.board);
-      if (pieceCount >= ENDGAME_PIECE_THRESHOLD) {
-        const nullState = state.clone();
-        const oldHash = nullState.hash;
+    if (allowNullMove && !inCheck && depth >= 3 && level >= 4 && this.countPieces(state.board) >= ENDGAME_PIECE_THRESHOLD) {
+      const nullState = state.clone();
+      nullState.hash ^= ZOBRIST_SIDE;
+      nullState.activeColor = oppositeColor(nullState.activeColor);
+      if (nullState.enPassantTarget) {
+        const epFile = nullState.enPassantTarget.charCodeAt(0) - 97;
+        if (epFile >= 0 && epFile < 8) nullState.hash ^= ZOBRIST_EP_FILE[epFile];
+      }
+      nullState.enPassantTarget = null;
 
-        // Update hash for side change
-        nullState.hash ^= ZOBRIST_SIDE;
-        nullState.activeColor = oppositeColor(nullState.activeColor);
-
-        // Clear en passant from hash
-        if (nullState.enPassantTarget) {
-          const epFile = nullState.enPassantTarget.charCodeAt(0) - 97;
-          if (epFile >= 0 && epFile < 8) nullState.hash ^= ZOBRIST_EP_FILE[epFile];
+      const nullDepth = Math.max(0, depth - 1 - NULL_MOVE_REDUCTION);
+      const nullScore = this.minimax(
+        nullState, nullDepth, alpha, beta, rootColor, !maximizing, level, timeout, startTime, false
+      );
+      if (nullScore !== null) {
+        if (maximizing && nullScore >= beta) {
+          this.lastSearchInfo.cutoffs += 1;
+          return beta;
         }
-        nullState.enPassantTarget = null;
-
-        const nullScore = this.minimax(
-          nullState, depth - 1 - NULL_MOVE_REDUCTION,
-          isMaximizing ? -beta : alpha,
-          isMaximizing ? -beta + 1 : alpha + 1,
-          rootColor, !isMaximizing, level, timeout, startTime, false
-        );
-
-        if (nullScore !== null) {
-          if (isMaximizing && nullScore >= beta) return beta;
-          if (!isMaximizing && nullScore <= alpha) return alpha;
+        if (!maximizing && nullScore <= alpha) {
+          this.lastSearchInfo.cutoffs += 1;
+          return alpha;
         }
       }
     }
 
-    // === Futility Pruning setup ===
     let canFutilityPrune = false;
-    let staticEvalForFP = 0;
-    if (level >= 6 && !inCheck && depth <= 3 && depth >= 1) {
-      staticEvalForFP = evaluate(state, rootColor);
+    if (level >= 6 && !inCheck && depth <= 3) {
       const margin = FUTILITY_MARGINS[depth] || 0;
-      if (isMaximizing && staticEvalForFP + margin <= alpha) {
-        canFutilityPrune = true;
-      }
-      if (!isMaximizing && staticEvalForFP - margin >= beta) {
-        canFutilityPrune = true;
-      }
+      canFutilityPrune = maximizing
+        ? staticEval + margin <= alpha
+        : staticEval - margin >= beta;
     }
 
     const ordered = this.orderMoves(legalMoves, depth, ttBestMove);
-    if (ordered.length === 0) return isMaximizing ? -Infinity : Infinity;
-
     let bestMove = ordered[0];
 
-    if (isMaximizing) {
+    if (maximizing) {
       let value = -Infinity;
       for (let i = 0; i < ordered.length; i++) {
-        if (timeout && startTime && i % 10 === 0 && Date.now() - startTime >= timeout) return null;
+        if (timeout && startTime && i % 10 === 0 && Date.now() - startTime >= timeout) {
+          this.lastSearchInfo.timedOut = true;
+          return null;
+        }
 
         const move = ordered[i];
+        if (canFutilityPrune && i > 0 && !move.captured && !move.promotion && !move.isEnPassant) continue;
 
-        // Futility pruning: skip quiet moves that can't raise score above alpha
-        if (canFutilityPrune && i > 0 && !move.captured && !move.promotion && !move.isEnPassant) {
-          continue;
-        }
-        
-        // Make move incrementally
+        const reduction = this.computeReduction(level, depth, i, move, inCheck);
         state.makeMove(move);
-
-        // Compute LMR reduction
-        let reduction = 0;
-        if (level >= 6 && depth >= 3 && i >= 3 && !move.captured && !move.promotion && !inCheck) {
-          // Logarithmic LMR for Level 6
-          reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(i + 1) / 2.5));
-          reduction = Math.min(reduction, depth - 2);
-          // Don't reduce killer moves or high-history moves
-          if (this.isKillerMove(move, depth) || this.getHistoryScore(move) > 500) {
-            reduction = 0;
-          }
-        } else if (level >= 5 && depth >= 3 && i >= 4 && !move.captured && !move.promotion && !inCheck) {
-          reduction = 1;
-          if (i >= 8) reduction = 2;
-        }
-
-        let child;
-        if (i === 0) {
-          // First move: search with full window
-          child = this.minimax(state, depth - 1 - reduction, alpha, beta, rootColor, false, level, timeout, startTime, true);
-        } else {
-          // PVS: search with null window
-          child = this.minimax(state, depth - 1 - reduction, alpha, alpha + 1, rootColor, false, level, timeout, startTime, true);
-          
-          // If it fails high, re-search with full window
-          if (child !== null && child > alpha && child < beta) {
-            child = this.minimax(state, depth - 1 - reduction, alpha, beta, rootColor, false, level, timeout, startTime, true);
-          }
-        }
-
+        let child = this.minimax(
+          state, depth - 1 - reduction, alpha, beta, rootColor, false, level, timeout, startTime, true
+        );
         if (child !== null && reduction > 0 && child > alpha) {
-          // Undo before re-search at full depth
-          state.undoMove();
-          state.makeMove(move);
           child = this.minimax(state, depth - 1, alpha, beta, rootColor, false, level, timeout, startTime, true);
         }
-
-        // Undo move
         state.undoMove();
 
         if (child === null) return null;
-
         if (child > value) { value = child; bestMove = move; }
         if (value > alpha) alpha = value;
         if (alpha >= beta) {
+          this.lastSearchInfo.cutoffs += 1;
           this.storeKillerMove(move, depth);
           this.updateHistory(move, depth);
           break;
@@ -1102,69 +1128,37 @@ export class AI {
       if (ttKey) {
         let flag = TT_EXACT;
         if (value <= originalAlpha) flag = TT_UPPER;
-        else if (value >= beta) flag = TT_LOWER;
+        else if (value >= originalBeta) flag = TT_LOWER;
         this.storeTable(ttKey, depth, value, flag, bestMove);
       }
-
       return value;
     }
 
-    // Minimizing player
     let value = Infinity;
     for (let i = 0; i < ordered.length; i++) {
-      if (timeout && startTime && i % 10 === 0 && Date.now() - startTime >= timeout) return null;
+      if (timeout && startTime && i % 10 === 0 && Date.now() - startTime >= timeout) {
+        this.lastSearchInfo.timedOut = true;
+        return null;
+      }
 
       const move = ordered[i];
+      if (canFutilityPrune && i > 0 && !move.captured && !move.promotion && !move.isEnPassant) continue;
 
-      // Futility pruning for minimizing
-      if (canFutilityPrune && i > 0 && !move.captured && !move.promotion && !move.isEnPassant) {
-        continue;
-      }
-      
-      // Make move incrementally
+      const reduction = this.computeReduction(level, depth, i, move, inCheck);
       state.makeMove(move);
-
-      let reduction = 0;
-      if (level >= 6 && depth >= 3 && i >= 3 && !move.captured && !move.promotion && !inCheck) {
-        reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(i + 1) / 2.5));
-        reduction = Math.min(reduction, depth - 2);
-        if (this.isKillerMove(move, depth) || this.getHistoryScore(move) > 500) {
-          reduction = 0;
-        }
-      } else if (level >= 5 && depth >= 3 && i >= 4 && !move.captured && !move.promotion && !inCheck) {
-        reduction = 1;
-        if (i >= 8) reduction = 2;
-      }
-
-      let child;
-      if (i === 0) {
-        // First move: search with full window
-        child = this.minimax(state, depth - 1 - reduction, alpha, beta, rootColor, true, level, timeout, startTime, true);
-      } else {
-        // PVS: search with null window
-        child = this.minimax(state, depth - 1 - reduction, beta - 1, beta, rootColor, true, level, timeout, startTime, true);
-        
-        // If it fails low, re-search with full window
-        if (child !== null && child < beta && child > alpha) {
-          child = this.minimax(state, depth - 1 - reduction, alpha, beta, rootColor, true, level, timeout, startTime, true);
-        }
-      }
-
+      let child = this.minimax(
+        state, depth - 1 - reduction, alpha, beta, rootColor, true, level, timeout, startTime, true
+      );
       if (child !== null && reduction > 0 && child < beta) {
-        // Undo before re-search at full depth
-        state.undoMove();
-        state.makeMove(move);
         child = this.minimax(state, depth - 1, alpha, beta, rootColor, true, level, timeout, startTime, true);
       }
-
-      // Undo move
       state.undoMove();
 
       if (child === null) return null;
-
       if (child < value) { value = child; bestMove = move; }
       if (value < beta) beta = value;
       if (alpha >= beta) {
+        this.lastSearchInfo.cutoffs += 1;
         this.storeKillerMove(move, depth);
         this.updateHistory(move, depth);
         break;
@@ -1174,7 +1168,7 @@ export class AI {
     if (ttKey) {
       let flag = TT_EXACT;
       if (value <= originalAlpha) flag = TT_UPPER;
-      else if (value >= beta) flag = TT_LOWER;
+      else if (value >= originalBeta) flag = TT_LOWER;
       this.storeTable(ttKey, depth, value, flag, bestMove);
     }
 
@@ -1182,76 +1176,90 @@ export class AI {
   }
 
   quiescence(state, alpha, beta, rootColor, standPat, timeout, startTime, level) {
-    if (timeout && startTime && Date.now() - startTime >= timeout) return null;
+    if (timeout && startTime && Date.now() - startTime >= timeout) {
+      this.lastSearchInfo.timedOut = true;
+      return null;
+    }
+
+    this.lastSearchInfo.qNodes += 1;
+    const maximizing = state.activeColor === rootColor;
+    const inCheck = isInCheck(state);
+    const legalMoves = generateLegalMoves(state);
+
+    if (legalMoves.length === 0) {
+      if (inCheck) {
+        return state.activeColor === rootColor ? -100000 : 100000;
+      }
+      return 0;
+    }
 
     let value = standPat;
-    if (value > alpha) {
-      alpha = value;
-      if (alpha >= beta) return alpha;
-    }
-
-    const allMoves = generateLegalMoves(state);
-    const captureMoves = allMoves.filter((m) => m.captured);
-
-    // For Level 6: sort by MVV-LVA, no cap on captures; add delta pruning
-    // For lower levels: simple slice(0, 16) cap
-    let movesToSearch;
-    if (level >= 6) {
-      // Sort captures by MVV-LVA
-      movesToSearch = captureMoves.sort((a, b) => {
-        const aVal = pieceValueApprox(a.captured) * 10 - pieceValueApprox(a.piece);
-        const bVal = pieceValueApprox(b.captured) * 10 - pieceValueApprox(b.piece);
-        return bVal - aVal;
-      });
-    } else {
-      movesToSearch = captureMoves.slice(0, 16);
-    }
-
-    for (let i = 0; i < movesToSearch.length; i++) {
-      if (timeout && startTime && i % 5 === 0 && Date.now() - startTime >= timeout) return value;
-
-      const move = movesToSearch[i];
-
-      // Delta pruning for Level 6: skip captures where captured piece + margin < alpha
-      if (level >= 6) {
-        const capturedValue = pieceValueApprox(move.captured);
-        if (standPat + capturedValue + 200 < alpha) {
-          continue; // This capture can't possibly raise the score enough
-        }
-      }
-
-      // Use incremental make/undo for Level 6
-      if (level >= 6) {
-        state.makeMove(move);
-        const nextEval = evaluate(state, rootColor);
-        const score = -this.quiescence(state, -beta, -alpha, rootColor, nextEval, timeout, startTime, level);
-        state.undoMove();
-
-        if (score === null) return value;
-        if (score > value) value = score;
+    if (!inCheck) {
+      if (maximizing) {
+        if (value >= beta) return value;
         if (value > alpha) alpha = value;
-        if (alpha >= beta) break;
       } else {
-        const next = state.clone();
-        applyMoveSearch(next, move, state.activeColor);
-        const score = -this.quiescence(next, -beta, -alpha, rootColor, evaluate(next, rootColor), timeout, startTime, level);
+        if (value <= alpha) return value;
+        if (value < beta) beta = value;
+      }
+    } else {
+      value = maximizing ? -Infinity : Infinity;
+    }
 
-        if (score === null) return value;
+    const noisyMoves = inCheck
+      ? legalMoves
+      : legalMoves.filter((m) => m.captured || m.promotion || m.isEnPassant);
+
+    const movesToSearch = this.orderMoves(noisyMoves, 0, null);
+    const cappedMoves = level >= 6 ? movesToSearch : movesToSearch.slice(0, 16);
+
+    for (let i = 0; i < cappedMoves.length; i++) {
+      if (timeout && startTime && i % 5 === 0 && Date.now() - startTime >= timeout) {
+        this.lastSearchInfo.timedOut = true;
+        return value;
+      }
+
+      const move = cappedMoves[i];
+      if (!inCheck && level >= 6 && !move.promotion) {
+        const capturedValue = pieceValueApprox(move.captured);
+        if (maximizing && standPat + capturedValue + 200 < alpha) continue;
+        if (!maximizing && standPat - capturedValue - 200 > beta) continue;
+      }
+
+      state.makeMove(move);
+      const score = this.quiescence(state, alpha, beta, rootColor, evaluate(state, rootColor), timeout, startTime, level);
+      state.undoMove();
+
+      if (score === null) return value;
+
+      if (maximizing) {
         if (score > value) value = score;
         if (value > alpha) alpha = value;
-        if (alpha >= beta) break;
+      } else {
+        if (score < value) value = score;
+        if (value < beta) beta = value;
+      }
+
+      if (alpha >= beta) {
+        this.lastSearchInfo.cutoffs += 1;
+        break;
       }
     }
+
     return value;
   }
 
-  async progressiveDeepeningSearch(state, legalMoves, maxDepth, color, level, timeout = 10000) {
+  async progressiveDeepeningSearch(state, legalMoves, maxDepth, color, level, timeout = 10000, signal, onInfo) {
     const startTime = Date.now();
     let bestMove = null;
     let previousBestScore = undefined;
 
     for (let currentDepth = 1; currentDepth <= maxDepth; currentDepth++) {
-      if (timeout && Date.now() - startTime >= timeout) break;
+      if (signal?.aborted) return null;
+      if (timeout && Date.now() - startTime >= timeout) {
+        this.lastSearchInfo.timedOut = true;
+        break;
+      }
 
       const move = this.searchRoot(state, legalMoves, currentDepth, color, {
         level,
@@ -1262,7 +1270,16 @@ export class AI {
 
       if (move !== null) {
         bestMove = move;
+        if (this.lastRootScore !== undefined) {
+          previousBestScore = this.lastRootScore;
+        }
+        this.lastSearchInfo.depthCompleted = currentDepth;
+        onInfo?.(this.getLastSearchInfo());
       }
+
+      if (this.lastSearchInfo.timedOut) break;
+
+      await Promise.resolve();
     }
 
     return bestMove;

@@ -29,6 +29,8 @@ const CONNECTED_PASSED_BONUS = 25;
 const ROOK_OPEN_FILE_BONUS = 25;
 const ROOK_SEMI_OPEN_FILE_BONUS = 12;
 const ROOK_BEHIND_PASSED_BONUS = 20;
+const ROOK_SEVENTH_RANK_BONUS = 18;
+const ROOK_KING_FILE_PRESSURE_BONUS = 12;
 const BLOCKED_PASSED_PENALTY = 15;
 
 /* === King safety constants === */
@@ -48,6 +50,8 @@ const TEMPO_BONUS = 10;
 /* === King distance to passed pawn (endgame) === */
 const KING_PASSER_PROXIMITY_OWN = 5;   // bonus per rank closer
 const KING_PASSER_PROXIMITY_ENEMY = 3; // penalty per rank closer (enemy king)
+const KING_RING_ATTACK_PENALTY = 7;
+const KING_RING_LOOSE_SQUARE_PENALTY = 4;
 
 /**
  * Phase calculation: total non-pawn non-king material at game start.
@@ -361,11 +365,23 @@ export function evaluate(state, color) {
   mgScore += blackRookEval;
   egScore += blackRookEval;
 
+  const whiteRookActivity = evaluateRookActivity(board, whiteRookList, blackKingIndex, blackPawnPositions, "white", color);
+  const blackRookActivity = evaluateRookActivity(board, blackRookList, whiteKingIndex, whitePawnPositions, "black", color);
+  mgScore += whiteRookActivity;
+  egScore += whiteRookActivity;
+  mgScore += blackRookActivity;
+  egScore += blackRookActivity;
+
   // King safety evaluation (middlegame weighted)
   const whiteKingSafety = evaluateKingSafety(whiteKingIndex, whitePawnFiles, blackPawnFiles, "white", color);
   const blackKingSafety = evaluateKingSafety(blackKingIndex, blackPawnFiles, whitePawnFiles, "black", color);
   mgScore += whiteKingSafety;
   mgScore += blackKingSafety;
+
+  const whiteKingPressure = evaluateKingPressure(board, whiteKingIndex, "white", color, phase);
+  const blackKingPressure = evaluateKingPressure(board, blackKingIndex, "black", color, phase);
+  mgScore += whiteKingPressure;
+  mgScore += blackKingPressure;
 
   // Mobility evaluation
   const whiteMobility = evaluateMobility(board, whiteKnights, whiteBishopList, whiteRookList, whiteQueens, "white", color);
@@ -374,6 +390,13 @@ export function evaluate(state, color) {
   egScore += whiteMobility;
   mgScore += blackMobility;
   egScore += blackMobility;
+
+  const whiteLoosePieces = evaluateLoosePieces(board, "white", color, phase);
+  const blackLoosePieces = evaluateLoosePieces(board, "black", color, phase);
+  mgScore += whiteLoosePieces;
+  egScore += Math.round(whiteLoosePieces * 0.7);
+  mgScore += blackLoosePieces;
+  egScore += Math.round(blackLoosePieces * 0.7);
 
   // King proximity to passed pawns (endgame only, scales with 1-phase)
   if (phase < 0.7) {
@@ -385,6 +408,12 @@ export function evaluate(state, color) {
     );
     egScore += kpEval;
   }
+
+  egScore += evaluatePassedPawnRaces(
+    whitePawnPositions, blackPawnPositions,
+    whiteKingIndex, blackKingIndex,
+    color, phase
+  );
 
   // Tempo bonus
   if (state.activeColor === color) {
@@ -503,6 +532,45 @@ function evaluateRooks(rookFiles, ownPawnFiles, enemyPawnFiles, rookColor, evalC
   return bonus * sign;
 }
 
+function evaluateRookActivity(board, rookIndexes, enemyKingIndex, enemyPawns, rookColor, evalColor) {
+  let bonus = 0;
+  const sign = rookColor === evalColor ? 1 : -1;
+  const seventhRank = rookColor === "white" ? 6 : 1;
+
+  for (const rookIndex of rookIndexes) {
+    const rank = Math.floor(rookIndex / 8);
+    if (rank === seventhRank) {
+      const enemyBackRank = rookColor === "white" ? 6 : 1;
+      const hasTargets = enemyPawns.some((p) => p.rank === enemyBackRank) ||
+        (enemyKingIndex >= 0 && Math.floor(enemyKingIndex / 8) === enemyBackRank);
+      if (hasTargets) bonus += ROOK_SEVENTH_RANK_BONUS;
+    }
+
+    if (enemyKingIndex >= 0 && rookHasLineToKing(board, rookIndex, enemyKingIndex)) {
+      bonus += ROOK_KING_FILE_PRESSURE_BONUS;
+    }
+  }
+
+  return bonus * sign;
+}
+
+function rookHasLineToKing(board, rookIndex, kingIndex) {
+  const rf = rookIndex % 8;
+  const rr = Math.floor(rookIndex / 8);
+  const kf = kingIndex % 8;
+  const kr = Math.floor(kingIndex / 8);
+
+  let step = 0;
+  if (rf === kf) step = kr > rr ? 8 : -8;
+  else if (rr === kr) step = kf > rf ? 1 : -1;
+  else return false;
+
+  for (let i = rookIndex + step; i !== kingIndex; i += step) {
+    if (board[i]) return false;
+  }
+  return true;
+}
+
 /**
  * Map index for PST; mirror ranks for black.
  */
@@ -558,6 +626,105 @@ function evaluateKingSafety(kingIndex, ownPawnFiles, enemyPawnFiles, kingColor, 
   }
 
   return bonus * sign;
+}
+
+function evaluateKingPressure(board, kingIndex, kingColor, evalColor, phase) {
+  if (kingIndex < 0) return 0;
+
+  const enemy = oppositeColor(kingColor);
+  const sign = kingColor === evalColor ? 1 : -1;
+  const kf = kingIndex % 8;
+  const kr = Math.floor(kingIndex / 8);
+  let pressure = 0;
+
+  for (let df = -1; df <= 1; df++) {
+    for (let dr = -1; dr <= 1; dr++) {
+      const f = kf + df;
+      const r = kr + dr;
+      if (f < 0 || f > 7 || r < 0 || r > 7) continue;
+      const idx = r * 8 + f;
+      if (squareAttackedByBoard(board, idx, enemy)) {
+        pressure += KING_RING_ATTACK_PENALTY + Math.round(5 * phase);
+        if (!squareAttackedByBoard(board, idx, kingColor)) {
+          pressure += KING_RING_LOOSE_SQUARE_PENALTY;
+        }
+      }
+    }
+  }
+
+  return -pressure * sign;
+}
+
+function evaluateLoosePieces(board, pieceColor, evalColor, phase) {
+  const enemy = oppositeColor(pieceColor);
+  const sign = pieceColor === evalColor ? 1 : -1;
+  let penalty = 0;
+
+  for (let i = 0; i < 64; i++) {
+    const piece = board[i];
+    if (!piece || getColorOf(piece) !== pieceColor || piece[1] === "K") continue;
+    if (!squareAttackedByBoard(board, i, enemy)) continue;
+
+    const defended = squareAttackedByBoard(board, i, pieceColor);
+    const type = piece[1];
+    let basePenalty = Math.round((PIECE_VALUES[type] || 0) * (type === "P" ? 0.08 : 0.12));
+    basePenalty = Math.max(type === "P" ? 6 : 18, Math.min(basePenalty, type === "Q" ? 120 : 75));
+    if (defended) basePenalty = Math.round(basePenalty * 0.45);
+    penalty += Math.round(basePenalty * (0.75 + phase * 0.25));
+  }
+
+  return -penalty * sign;
+}
+
+function squareAttackedByBoard(board, targetIndex, attackerColor) {
+  const tf = targetIndex % 8;
+  const tr = Math.floor(targetIndex / 8);
+
+  const knightCode = attackerColor === "white" ? "wN" : "bN";
+  const knightJumps = [[1,2],[2,1],[2,-1],[1,-2],[-1,-2],[-2,-1],[-2,1],[-1,2]];
+  for (const [df, dr] of knightJumps) {
+    const f = tf + df;
+    const r = tr + dr;
+    if (f >= 0 && f <= 7 && r >= 0 && r <= 7 && board[r * 8 + f] === knightCode) return true;
+  }
+
+  const pawnCode = attackerColor === "white" ? "wP" : "bP";
+  const pawnDir = attackerColor === "white" ? -1 : 1;
+  const pawnRank = tr + pawnDir;
+  if (pawnRank >= 0 && pawnRank <= 7) {
+    if (tf > 0 && board[pawnRank * 8 + tf - 1] === pawnCode) return true;
+    if (tf < 7 && board[pawnRank * 8 + tf + 1] === pawnCode) return true;
+  }
+
+  const kingCode = attackerColor === "white" ? "wK" : "bK";
+  for (let df = -1; df <= 1; df++) {
+    for (let dr = -1; dr <= 1; dr++) {
+      if (df === 0 && dr === 0) continue;
+      const f = tf + df;
+      const r = tr + dr;
+      if (f >= 0 && f <= 7 && r >= 0 && r <= 7 && board[r * 8 + f] === kingCode) return true;
+    }
+  }
+
+  const orthoAttackers = attackerColor === "white" ? ["wR", "wQ"] : ["bR", "bQ"];
+  const diagAttackers = attackerColor === "white" ? ["wB", "wQ"] : ["bB", "bQ"];
+  if (rayAttacked(board, tf, tr, [[1,0],[-1,0],[0,1],[0,-1]], orthoAttackers)) return true;
+  if (rayAttacked(board, tf, tr, [[1,1],[1,-1],[-1,1],[-1,-1]], diagAttackers)) return true;
+  return false;
+}
+
+function rayAttacked(board, file, rank, dirs, attackers) {
+  for (const [df, dr] of dirs) {
+    let f = file + df;
+    let r = rank + dr;
+    while (f >= 0 && f <= 7 && r >= 0 && r <= 7) {
+      const piece = board[r * 8 + f];
+      if (piece) return attackers.includes(piece);
+      f += df;
+      r += dr;
+    }
+  }
+  return false;
 }
 
 /**
@@ -648,6 +815,46 @@ function evaluateMobility(board, knights, bishops, rooks, queens, pieceColor, ev
   }
 
   return bonus * sign;
+}
+
+function evaluatePassedPawnRaces(whitePawns, blackPawns, whiteKingIdx, blackKingIdx, evalColor, phase) {
+  if (phase > 0.75) return 0;
+
+  let bonus = 0;
+  const raceWeight = 1 - phase;
+
+  for (const pawn of whitePawns) {
+    if (!isPassedPawn(pawn.file, pawn.rank, "white", blackPawns)) continue;
+    const promotionDistance = 7 - pawn.rank;
+    const promoSquare = { file: pawn.file, rank: 7 };
+    const enemyKingDistance = kingDistanceToSquare(blackKingIdx, promoSquare);
+    const ownKingDistance = kingDistanceToSquare(whiteKingIdx, pawn);
+    let raceBonus = Math.max(0, 7 - promotionDistance) * 6;
+    if (enemyKingDistance > promotionDistance) raceBonus += 35;
+    if (ownKingDistance <= promotionDistance + 1) raceBonus += 12;
+    bonus += evalColor === "white" ? raceBonus * raceWeight : -raceBonus * raceWeight;
+  }
+
+  for (const pawn of blackPawns) {
+    if (!isPassedPawn(pawn.file, pawn.rank, "black", whitePawns)) continue;
+    const promotionDistance = pawn.rank;
+    const promoSquare = { file: pawn.file, rank: 0 };
+    const enemyKingDistance = kingDistanceToSquare(whiteKingIdx, promoSquare);
+    const ownKingDistance = kingDistanceToSquare(blackKingIdx, pawn);
+    let raceBonus = Math.max(0, 7 - promotionDistance) * 6;
+    if (enemyKingDistance > promotionDistance) raceBonus += 35;
+    if (ownKingDistance <= promotionDistance + 1) raceBonus += 12;
+    bonus += evalColor === "black" ? raceBonus * raceWeight : -raceBonus * raceWeight;
+  }
+
+  return Math.round(bonus);
+}
+
+function kingDistanceToSquare(kingIndex, square) {
+  if (kingIndex < 0) return 99;
+  const kf = kingIndex % 8;
+  const kr = Math.floor(kingIndex / 8);
+  return Math.max(Math.abs(kf - square.file), Math.abs(kr - square.rank));
 }
 
 /**

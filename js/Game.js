@@ -1,7 +1,7 @@
 import { GameState } from "./engine/GameState.js";
 import { AI } from "./engine/AI.js";
 import { generateLegalMoves, getCheckedKingSquare as kingSquareIfInCheck } from "./engine/Rules.js";
-import { getTomitankClient } from "./tomitankClient.js";
+import { createEngineAdapter, ENGINE_IDS } from "./engineAdapter.js";
 
 /**
  * Game.js
@@ -14,61 +14,6 @@ import { getTomitankClient } from "./tomitankClient.js";
  * - Exposes high-level methods used by the frontend.
  */
 
-// Shared Web Worker instance for AI computation
-let aiWorker = null;
-let workerReady = false;
-let pendingResolve = null;
-let pendingReject = null;
-
-/**
- * Initialize the AI Web Worker
- */
-function initWorker() {
-  if (aiWorker) return;
-
-  try {
-    // Create worker with module support
-    aiWorker = new Worker(new URL("./ai.worker.js", import.meta.url), { type: "module" });
-
-    aiWorker.onmessage = (event) => {
-      const { type, move, message } = event.data;
-
-      if (type === "ready") {
-        workerReady = true;
-        return;
-      }
-
-      if (type === "result") {
-        if (pendingResolve) {
-          pendingResolve(move);
-          pendingResolve = null;
-          pendingReject = null;
-        }
-      } else if (type === "error") {
-        console.error("AI Worker error:", message);
-        if (pendingReject) {
-          pendingReject(new Error(message));
-          pendingResolve = null;
-          pendingReject = null;
-        }
-      }
-    };
-
-    aiWorker.onerror = (error) => {
-      console.error("AI Worker failed:", error);
-      // Fall back to main thread AI
-      aiWorker = null;
-      workerReady = false;
-    };
-  } catch (e) {
-    console.warn("Web Worker not supported, using main thread AI:", e);
-    aiWorker = null;
-  }
-}
-
-// Initialize worker on module load
-initWorker();
-
 export class Game {
   /**
    * @param {Object} options
@@ -80,6 +25,8 @@ export class Game {
   constructor({ playerColor, difficulty, onUpdate, engine = "builtin" }) {
     // Fallback AI for when worker is not available
     this.ai = new AI();
+    this.auroraAdapter = createEngineAdapter(ENGINE_IDS.AURORA, { ai: this.ai, useWorker: true });
+    this.tomitankAdapter = createEngineAdapter(ENGINE_IDS.TOMITANK);
     this.onUpdate = onUpdate || (() => { });
 
     const resolvedPlayerColor =
@@ -107,6 +54,8 @@ export class Game {
   static fromSaved(serialized, { difficulty, onUpdate, engine = "builtin" } = {}) {
     const instance = Object.create(Game.prototype);
     instance.ai = new AI();
+    instance.auroraAdapter = createEngineAdapter(ENGINE_IDS.AURORA, { ai: instance.ai, useWorker: true });
+    instance.tomitankAdapter = createEngineAdapter(ENGINE_IDS.TOMITANK);
     instance.onUpdate = onUpdate || (() => { });
     instance.state = new GameState(serialized);
     instance.setDifficulty(difficulty || serialized.difficulty || 6);
@@ -279,87 +228,60 @@ export class Game {
   }
 
   /**
+   * Apply a legal engine move for the current side to move.
+   * Used by engine-vs-engine match mode.
+   * @param {import("./engine/Move.js").Move} move
+   * @returns {{ success: boolean, move?: import("./engine/Move.js").Move, error?: string }}
+   */
+  handleEngineMove(move) {
+    if (this.isGameOver()) {
+      return { success: false, error: "Game is over" };
+    }
+
+    const legalMoves = generateLegalMoves(this.state.asRulesState());
+    const validMove = legalMoves.find(m =>
+      m.from === move.from &&
+      m.to === move.to &&
+      (!move.promotion || m.promotion === move.promotion)
+    );
+
+    if (!validMove) {
+      return { success: false, error: "Illegal move" };
+    }
+
+    this.state.applyMove(validMove);
+    this.notify();
+    return { success: true, move: validMove };
+  }
+
+  /**
    * Ask AI to compute best move given current state and difficulty.
    * Uses Web Worker for non-blocking computation when available.
    *
    * @returns {Promise<import("./engine/Move.js").Move|null>}
    */
-  async computeAIMove() {
+  async computeAIMove({ signal, onInfo, movetime } = {}) {
     if (this.isGameOver()) return null;
     const aiColor = this.getCurrentTurn();
-    const timeout = this.aiMoveTimeMs;
+    const timeout = movetime || this.aiMoveTimeMs;
+    const auroraOpts = {
+      difficulty: this.difficulty,
+      movetime: timeout,
+      signal,
+      onInfo,
+      forColor: aiColor,
+    };
 
     if (this.engine === "tomitank") {
       try {
-        const client = getTomitankClient();
-        const move = await client.findBestMove(this.state, {
-          movetime: timeout,
-          difficulty: this.difficulty,
-        });
+        const move = await this.tomitankAdapter.findBestMove(this.state, auroraOpts);
         if (move) return move;
       } catch (e) {
         console.warn("TomitankChess failed, falling back to built-in AI:", e);
       }
-      return this.ai.findBestMove(this.state, {
-        level: this.difficulty,
-        forColor: aiColor,
-        timeout: timeout,
-      });
     }
 
-    // Try to use Web Worker for non-blocking computation
-    if (aiWorker && workerReady) {
-      return new Promise((resolve, reject) => {
-        // Store resolve/reject for worker callback
-        pendingResolve = resolve;
-        pendingReject = reject;
-
-        // Set timeout to fall back to main thread if worker hangs
-        const timeoutId = setTimeout(() => {
-          if (pendingResolve) {
-            console.warn("AI Worker timeout, falling back to main thread");
-            pendingResolve = null;
-            pendingReject = null;
-            // Fall back to main thread AI
-            this.ai.findBestMove(this.state, {
-              level: this.difficulty,
-              forColor: aiColor,
-              timeout: timeout,
-            }).then(resolve).catch(reject);
-          }
-        }, timeout + 2000); // Give worker extra time before fallback
-
-        // Clear timeout when worker responds
-        const originalResolve = pendingResolve;
-        pendingResolve = (move) => {
-          clearTimeout(timeoutId);
-          originalResolve(move);
-        };
-
-        // Send search request to worker
-        aiWorker.postMessage({
-          type: "search",
-          state: {
-            board: this.state.board,
-            activeColor: this.state.activeColor,
-            castlingRights: this.state.castlingRights,
-            enPassantTarget: this.state.enPassantTarget,
-            halfmoveClock: this.state.halfmoveClock,
-            fullmoveNumber: this.state.fullmoveNumber,
-          },
-          level: this.difficulty,
-          forColor: aiColor,
-          timeout: timeout,
-        });
-      });
-    }
-
-    // Fallback: use main thread AI
-    return this.ai.findBestMove(this.state, {
-      level: this.difficulty,
-      forColor: aiColor,
-      timeout: timeout,
-    });
+    return this.auroraAdapter.findBestMove(this.state, auroraOpts);
   }
 
   /**
@@ -380,4 +302,3 @@ export class Game {
     this.onUpdate(this.state.getSnapshot());
   }
 }
-

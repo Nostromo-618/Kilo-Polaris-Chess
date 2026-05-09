@@ -12,6 +12,13 @@
  *   kpc-board-size           "0" … "100" desktop board width slider
  *   kpc-color                "white" | "black" | "random"
  *   kpc-engine               "builtin" | "tomitank"
+ *   kpc-play-mode            "human" | "match"
+ *   kpc-match-white-engine   "builtin" | "tomitank"
+ *   kpc-match-black-engine   "builtin" | "tomitank"
+ *   kpc-match-white-strength "1" … "6"
+ *   kpc-match-black-strength "1" … "6"
+ *   kpc-match-movetime       per-move milliseconds
+ *   kpc-match-perspective    "white" | "black"
  */
 
 const KEYS = {
@@ -22,6 +29,13 @@ const KEYS = {
   BOARD_SIZE: 'kpc-board-size',
   COLOR: 'kpc-color',
   ENGINE: 'kpc-engine',
+  PLAY_MODE: 'kpc-play-mode',
+  MATCH_WHITE_ENGINE: 'kpc-match-white-engine',
+  MATCH_BLACK_ENGINE: 'kpc-match-black-engine',
+  MATCH_WHITE_STRENGTH: 'kpc-match-white-strength',
+  MATCH_BLACK_STRENGTH: 'kpc-match-black-strength',
+  MATCH_MOVETIME: 'kpc-match-movetime',
+  MATCH_PERSPECTIVE: 'kpc-match-perspective',
 };
 
 /**
@@ -132,6 +146,87 @@ export function setEngine(engine) {
   if (engine === 'builtin' || engine === 'tomitank') {
     write(KEYS.ENGINE, engine);
   }
+}
+
+// ── Play mode / engine match settings ──────────────────────────────────────
+
+/** @returns {"human"|"match"} */
+export function getPlayMode() {
+  return read(KEYS.PLAY_MODE) === 'match' ? 'match' : 'human';
+}
+
+/** @param {"human"|"match"} mode */
+export function setPlayMode(mode) {
+  write(KEYS.PLAY_MODE, mode === 'match' ? 'match' : 'human');
+}
+
+/** @returns {"builtin"|"tomitank"} */
+export function getMatchWhiteEngine() {
+  return read(KEYS.MATCH_WHITE_ENGINE) === 'tomitank' ? 'tomitank' : 'builtin';
+}
+
+/** @param {"builtin"|"tomitank"} engine */
+export function setMatchWhiteEngine(engine) {
+  write(KEYS.MATCH_WHITE_ENGINE, engine === 'tomitank' ? 'tomitank' : 'builtin');
+}
+
+/** @returns {"builtin"|"tomitank"} */
+export function getMatchBlackEngine() {
+  return read(KEYS.MATCH_BLACK_ENGINE) === 'builtin' ? 'builtin' : 'tomitank';
+}
+
+/** @param {"builtin"|"tomitank"} engine */
+export function setMatchBlackEngine(engine) {
+  write(KEYS.MATCH_BLACK_ENGINE, engine === 'builtin' ? 'builtin' : 'tomitank');
+}
+
+/** @returns {number} */
+export function getMatchWhiteStrength() {
+  const n = Number(read(KEYS.MATCH_WHITE_STRENGTH));
+  if (Number.isNaN(n) || n < 1 || n > 6) return 3;
+  return Math.round(n);
+}
+
+/** @param {number} level */
+export function setMatchWhiteStrength(level) {
+  const clamped = Math.max(1, Math.min(6, Number(level) || 3));
+  write(KEYS.MATCH_WHITE_STRENGTH, String(Math.round(clamped)));
+}
+
+/** @returns {number} */
+export function getMatchBlackStrength() {
+  const n = Number(read(KEYS.MATCH_BLACK_STRENGTH));
+  if (Number.isNaN(n) || n < 1 || n > 6) return 3;
+  return Math.round(n);
+}
+
+/** @param {number} level */
+export function setMatchBlackStrength(level) {
+  const clamped = Math.max(1, Math.min(6, Number(level) || 3));
+  write(KEYS.MATCH_BLACK_STRENGTH, String(Math.round(clamped)));
+}
+
+/** @returns {number} */
+export function getMatchMoveTime() {
+  const n = Number(read(KEYS.MATCH_MOVETIME));
+  if (Number.isNaN(n) || n < 100 || n > 30000) return 1000;
+  return Math.round(n);
+}
+
+/** @param {number} value */
+export function setMatchMoveTime(value) {
+  const clamped = Math.max(100, Math.min(30000, Number(value) || 1000));
+  write(KEYS.MATCH_MOVETIME, String(Math.round(clamped)));
+}
+
+/** @returns {"white"|"black"} */
+export function getMatchPerspective() {
+  return read(KEYS.MATCH_PERSPECTIVE) === 'black' ? 'black' : 'white';
+}
+
+/** @param {"white"|"black"} color */
+export function setMatchPerspective(color) {
+  write(KEYS.MATCH_PERSPECTIVE, color === 'black' ? 'black' : 'white');
 }
 
 // ── Difficulty ───────────────────────────────────────────────────────────────

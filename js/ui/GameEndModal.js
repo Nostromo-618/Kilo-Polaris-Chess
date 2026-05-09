@@ -105,9 +105,10 @@ export class GameEndModal {
 
     if (result.outcome === 'checkmate') {
       const isPlayerWinner = result.winner === playerColor;
+      const winner = result.winner === 'white' ? 'White' : 'Black';
       icon = isPlayerWinner ? '🎉' : '😔';
-      title = isPlayerWinner ? 'You Win!' : 'Computer Wins';
-      message = `Checkmate! ${result.winner === 'white' ? 'White' : 'Black'} wins.`;
+      title = `${winner} Wins`;
+      message = `Checkmate. ${winner} wins.`;
     } else if (result.outcome === 'stalemate') {
       icon = '🤝';
       title = 'Draw';

@@ -502,9 +502,7 @@ export class GameState {
     switch (this.result.outcome) {
       case "checkmate": {
         const winner = this.result.winner === "white" ? "White" : "Black";
-        const youWin =
-          this.result.winner === this.playerColor ? "You win." : "Computer wins.";
-        this.statusText = `Checkmate. ${winner} wins. ${youWin}`;
+        this.statusText = `Checkmate. ${winner} wins.`;
         break;
       }
       case "stalemate":

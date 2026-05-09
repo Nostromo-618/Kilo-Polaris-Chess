@@ -1,14 +1,16 @@
-# Aurora Polaris Chess v2.1.1
+# Aurora Polaris Chess v2.1.3
 
 A pure client-side chess game that runs entirely in the browser. Play against a configurable AI with no server—ideal for static hosting (e.g. GitHub Pages).
 
-**Version:** see [`package.json`](package.json) · **History:** Change Log TBA some time later; TODO.
+**Version:** see [`package.json`](package.json) · **History:** in-app changelog via the version badge.
 
 ## Features
 
 - Full chess rules (castling, en passant, promotion, draws, checkmate / stalemate)
-- AI search with difficulty levels (button presets), fixed internal timing policy, and Web Worker-based search so the UI stays responsive
+- Stronger Aurora Polaris AI search with difficulty levels, deterministic transposition hashing, corrected tactical quiescence, and Web Worker-based search so the UI stays responsive
 - **TomitankChess** is the strong default engine ([tomitankChess](https://github.com/tomitank/tomitankChess) 6.0 vendored under [`vendor/tomitankChess.js`](vendor/tomitankChess.js)); Aurora Polaris AI remains available as an alternative in **Computer engine**
+- Engine Match mode: run Aurora vs Aurora, Aurora vs Tomitank, or Tomitank vs Tomitank with per-side strength/depth, selectable per-move time, board perspective, pause/resume/stop, score, and move log
+- Aurora v2.1.3 baseline gate for fixed tactics, timeout behavior, and short self-play (`pnpm run test:baseline`)
 - Board size slider (desktop), theme controls, move history, and persisted settings via `localStorage`
 - Accessible controls (labeled groups, screen-reader text) and responsive layout (mobile board fits the viewport while keeping square cells)
 - In-check feedback: the checked king’s square is highlighted in red for the side to move
@@ -29,13 +31,15 @@ Open `http://localhost:3000` (or your host). For development, any static file se
 pnpm install
 pnpm test                 # full Playwright suite
 pnpm run test:quick       # excludes long “full game” AI tests
+pnpm run test:baseline    # Aurora v2.1.3 engine release gate
 ```
 
 ## Tech stack
 
 - Vanilla ES modules (no framework)
-- UI: [Vanduo](https://github.com/vanduo-oss/framework) (loaded from [jsDelivr](https://www.jsdelivr.com/) in `index.html`)
+- UI: [Vanduo](https://github.com/vanduo-oss/framework) v1.3.8 (loaded from [jsDelivr](https://www.jsdelivr.com/) in `index.html`)
 - Engine: move generation, rules, evaluation, and AI search under `js/engine/`
+- Engine adapter layer: [`js/engineAdapter.js`](js/engineAdapter.js), used by human play and engine matches
 - UCI engine integration: [`vendor/tomitankChess.js`](vendor/tomitankChess.js), loaded in a dedicated Web Worker via [`js/tomitankClient.js`](js/tomitankClient.js)
 
 ## Licensing

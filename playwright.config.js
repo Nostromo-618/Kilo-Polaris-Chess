@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
  * Playwright configuration for Browser Chess
  * - Chromium only (per requirements)
  * - Desktop + Mobile viewport testing
- * - Uses npx serve on port 3000
+ * - Uses the local Node static server on port 3000
  */
 export default defineConfig({
   testDir: './tests',
@@ -56,7 +56,7 @@ export default defineConfig({
 
   /* Run local server before tests */
   webServer: {
-    command: 'npx serve . -p 3000',
+    command: 'node tests/server/static-server.mjs 3000',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
