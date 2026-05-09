@@ -8,7 +8,7 @@
   <meta name="description" content="Modern vanilla JS chess vs computer with 6 difficulty levels." />
 
   <!-- Vanduo Framework CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vanduo-oss/framework@v1.3.3/dist/vanduo.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vanduo-oss/framework@v1.3.8/dist/vanduo.min.css" />
 
   <!-- Phosphor Icons (Duotone) -->
   <link rel="stylesheet" href="dist/icons/phosphor/duotone/style.css" />
@@ -94,6 +94,14 @@
               <h2 class="vd-text-gradient">Game Settings</h2>
 
               <div class="vd-form-group">
+                <div class="vd-form-label" id="play-mode-label">Mode:</div>
+                <div class="vd-btn-group" id="play-mode-choice" role="group" aria-labelledby="play-mode-label">
+                  <button type="button" data-mode="human" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">Human</button>
+                  <button type="button" data-mode="match" class="vd-btn vd-btn-outline vd-btn-sm">Engine Match</button>
+                </div>
+              </div>
+
+              <div class="vd-form-group human-play-setting">
                 <label class="vd-form-label">Play as:</label>
                 <div class="vd-btn-group" id="color-choice">
                   <button data-color="white" class="vd-btn vd-btn-outline vd-btn-sm">White</button>
@@ -102,7 +110,7 @@
                 </div>
               </div>
 
-              <div class="vd-form-group">
+              <div class="vd-form-group human-play-setting">
                 <div class="vd-form-label" id="engine-label">Computer engine:</div>
                 <div class="vd-btn-group" id="engine-choice" role="group" aria-labelledby="engine-label">
                   <button
@@ -126,7 +134,7 @@
                 </div>
               </div>
 
-              <div class="vd-form-group">
+              <div class="vd-form-group human-play-setting">
                 <div class="vd-form-label" id="difficulty-label">Computer strength:</div>
                 <div class="vd-btn-group" id="difficulty-choice" role="group" aria-labelledby="difficulty-label" aria-describedby="difficulty-desc">
                   <button data-level="1" class="vd-btn vd-btn-outline vd-btn-sm" title="Very Easy">1</button>
@@ -137,6 +145,73 @@
                   <button data-level="6" class="vd-btn vd-btn-outline vd-btn-sm" title="Expert">6</button>
                 </div>
                 <span id="difficulty-desc" class="vd-sr-only">Select AI difficulty level from 1 (easiest) to 6 (expert)</span>
+              </div>
+
+              <div id="match-settings" class="match-settings" hidden>
+                <div class="vd-form-group">
+                  <div class="vd-form-label" id="match-white-label">White engine:</div>
+                  <div class="vd-btn-group" id="match-white-engine-choice" role="group" aria-labelledby="match-white-label">
+                    <button type="button" data-engine="builtin" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">Aurora</button>
+                    <button type="button" data-engine="tomitank" class="vd-btn vd-btn-outline vd-btn-sm">Tomitank</button>
+                  </div>
+                </div>
+
+                <div class="vd-form-group match-strength-row">
+                  <div class="vd-form-label" id="match-white-strength-label">White Aurora strength:</div>
+                  <div class="vd-btn-group match-strength-choice" id="match-white-strength-choice" role="group" aria-labelledby="match-white-strength-label">
+                    <button type="button" data-level="1" class="vd-btn vd-btn-outline vd-btn-sm">1</button>
+                    <button type="button" data-level="2" class="vd-btn vd-btn-outline vd-btn-sm">2</button>
+                    <button type="button" data-level="3" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">3</button>
+                    <button type="button" data-level="4" class="vd-btn vd-btn-outline vd-btn-sm">4</button>
+                    <button type="button" data-level="5" class="vd-btn vd-btn-outline vd-btn-sm">5</button>
+                    <button type="button" data-level="6" class="vd-btn vd-btn-outline vd-btn-sm">6</button>
+                  </div>
+                </div>
+
+                <div class="vd-form-group">
+                  <div class="vd-form-label" id="match-black-label">Black engine:</div>
+                  <div class="vd-btn-group" id="match-black-engine-choice" role="group" aria-labelledby="match-black-label">
+                    <button type="button" data-engine="builtin" class="vd-btn vd-btn-outline vd-btn-sm">Aurora</button>
+                    <button type="button" data-engine="tomitank" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">Tomitank</button>
+                  </div>
+                </div>
+
+                <div class="vd-form-group match-strength-row">
+                  <div class="vd-form-label" id="match-black-strength-label">Black Tomitank depth:</div>
+                  <div class="vd-btn-group match-strength-choice" id="match-black-strength-choice" role="group" aria-labelledby="match-black-strength-label">
+                    <button type="button" data-level="1" class="vd-btn vd-btn-outline vd-btn-sm">1</button>
+                    <button type="button" data-level="2" class="vd-btn vd-btn-outline vd-btn-sm">2</button>
+                    <button type="button" data-level="3" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">3</button>
+                    <button type="button" data-level="4" class="vd-btn vd-btn-outline vd-btn-sm">4</button>
+                    <button type="button" data-level="5" class="vd-btn vd-btn-outline vd-btn-sm">5</button>
+                    <button type="button" data-level="6" class="vd-btn vd-btn-outline vd-btn-sm">6</button>
+                  </div>
+                </div>
+
+                <div class="vd-form-group">
+                  <label class="vd-form-label" for="match-movetime-select">Move time:</label>
+                  <select id="match-movetime-select" class="vd-form-control">
+                    <option value="500">0.5s</option>
+                    <option value="1000" selected>1s</option>
+                    <option value="2000">2s</option>
+                    <option value="5000">5s</option>
+                    <option value="10000">10s</option>
+                  </select>
+                </div>
+
+                <div class="vd-form-group">
+                  <div class="vd-form-label" id="match-perspective-label">Board view:</div>
+                  <div class="vd-btn-group" id="match-perspective-choice" role="group" aria-labelledby="match-perspective-label">
+                    <button type="button" data-perspective="white" class="vd-btn vd-btn-outline vd-btn-sm vd-is-active">White</button>
+                    <button type="button" data-perspective="black" class="vd-btn vd-btn-outline vd-btn-sm">Black</button>
+                  </div>
+                </div>
+
+                <div class="match-actions" aria-label="Engine match controls">
+                  <button id="match-start-btn" class="vd-btn vd-btn-primary vd-btn-sm" type="button">Start</button>
+                  <button id="match-pause-btn" class="vd-btn vd-btn-outline vd-btn-sm" type="button" disabled>Pause</button>
+                  <button id="match-stop-btn" class="vd-btn vd-btn-outline vd-btn-sm" type="button" disabled>Stop</button>
+                </div>
               </div>
 
             </section>
@@ -156,6 +231,7 @@
               <h2 class="vd-text-gradient">Status</h2>
               <div id="turn-indicator" class="status-sub"></div>
               <div id="last-move-indicator" class="status-sub"></div>
+              <div id="match-score-indicator" class="status-sub" hidden></div>
             </section>
 
             <section class="vd-card-body history-section" aria-label="Move history">
@@ -165,7 +241,7 @@
 
             <div class="side-panel-footer">
               <div class="side-panel-version-wrap">
-                <button type="button" id="changelog-trigger" class="app-version" aria-label="Open changelog for version 2.1.2">v2.1.2</button>
+                <button type="button" id="changelog-trigger" class="app-version" aria-label="Open changelog for version 2.1.3">v2.1.3</button>
               </div>
               <p class="side-panel-attribution">
                 <a href="https://vanduo.dev/" target="_blank" rel="noopener noreferrer">UI powered by Vanduo Framework</a>
@@ -182,7 +258,7 @@
   <div id="disclaimer-modal-container"></div>
   <div id="changelog-modal-container"></div>
 
-  <script src="https://cdn.jsdelivr.net/gh/vanduo-oss/framework@v1.3.3/dist/vanduo.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/vanduo-oss/framework@v1.3.8/dist/vanduo.min.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 

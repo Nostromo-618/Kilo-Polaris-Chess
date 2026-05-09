@@ -1,8 +1,60 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v2.1.3",
+    date: "May 9, 2026",
+    latest: true,
+    columns: [
+      {
+        title: "Engine",
+        groups: [
+          {
+            title: "Aurora Polaris",
+            items: [
+              {
+                icon: "ph-brain",
+                title: "Stronger search",
+                body: "Hardened Aurora's search with deterministic hashing, safer transposition-table probes, corrected quiescence scoring, and stronger tactical evaluation.",
+              },
+              {
+                icon: "ph-shield-check",
+                title: "Clean-room tuning",
+                body: "Added original evaluation terms for loose pieces, king pressure, rook activity, and passed-pawn races without borrowing from external engines.",
+              },
+              {
+                icon: "ph-flag-checkered",
+                title: "Baseline gate",
+                body: "Added a repeatable v2.1.3 baseline check for fixed tactics, timeout behavior, and short Aurora self-play.",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Match Lab",
+        groups: [
+          {
+            title: "New Mode",
+            items: [
+              {
+                icon: "ph-swords",
+                title: "Engine matches",
+                body: "Added engine-vs-engine play with Aurora vs Aurora, Aurora vs Tomitank, and Tomitank vs Tomitank pairings, including per-side strength/depth, pause, resume, stop, score, and move-time controls.",
+              },
+              {
+                icon: "ph-paint-roller",
+                title: "Vanduo v1.3.8",
+                body: "Updated the pinned Vanduo CSS and JavaScript assets from v1.3.3 to v1.3.8.",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: "v2.1.2",
     date: "April 11, 2026",
-    latest: true,
+    latest: false,
     columns: [
       {
         title: "Bug Fixes",

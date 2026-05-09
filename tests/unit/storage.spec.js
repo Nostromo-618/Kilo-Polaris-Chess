@@ -243,6 +243,50 @@ test.describe('Storage - Difficulty', () => {
     });
 });
 
+test.describe('Storage - Match Strength', () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto('/');
+        await page.evaluate(() => localStorage.clear());
+    });
+
+    test('match strengths default to level 3', async ({ page }) => {
+        const result = await page.evaluate(async () => {
+            const s = await import('/js/storage.js');
+            return {
+                white: s.getMatchWhiteStrength(),
+                black: s.getMatchBlackStrength(),
+            };
+        });
+        expect(result).toEqual({ white: 3, black: 3 });
+    });
+
+    test('match strengths round-trip valid levels independently', async ({ page }) => {
+        const result = await page.evaluate(async () => {
+            const s = await import('/js/storage.js');
+            s.setMatchWhiteStrength(2);
+            s.setMatchBlackStrength(5);
+            return {
+                white: s.getMatchWhiteStrength(),
+                black: s.getMatchBlackStrength(),
+            };
+        });
+        expect(result).toEqual({ white: 2, black: 5 });
+    });
+
+    test('match strengths clamp invalid values', async ({ page }) => {
+        const result = await page.evaluate(async () => {
+            const s = await import('/js/storage.js');
+            s.setMatchWhiteStrength(99);
+            s.setMatchBlackStrength(-5);
+            return {
+                white: s.getMatchWhiteStrength(),
+                black: s.getMatchBlackStrength(),
+            };
+        });
+        expect(result).toEqual({ white: 6, black: 1 });
+    });
+});
+
 test.describe('Storage - Game', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/');

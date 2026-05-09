@@ -18,8 +18,28 @@ import {
   getColorChoice,
   getEngine,
   setEngine,
+  getPlayMode,
+  setPlayMode,
+  getMatchWhiteEngine,
+  setMatchWhiteEngine,
+  getMatchBlackEngine,
+  setMatchBlackEngine,
+  getMatchWhiteStrength,
+  setMatchWhiteStrength,
+  getMatchBlackStrength,
+  setMatchBlackStrength,
+  getMatchMoveTime,
+  setMatchMoveTime,
+  getMatchPerspective,
+  setMatchPerspective,
 } from "./storage.js";
 import { getTomitankClient } from "./tomitankClient.js";
+import {
+  createEngineAdapter,
+  getEngineDisplayName,
+  getEngineStrengthControlLabel,
+  getEngineStrengthLabel,
+} from "./engineAdapter.js";
 
 /**
  * The Vanduo bundle registers components but does not start them; `init()` runs
@@ -69,6 +89,21 @@ const dom = {
   boardContainer: document.getElementById("board-container"),
   colorChoice: document.getElementById("color-choice"),
   engineChoice: document.getElementById("engine-choice"),
+  playModeChoice: document.getElementById("play-mode-choice"),
+  humanPlaySettings: document.querySelectorAll(".human-play-setting"),
+  matchSettings: document.getElementById("match-settings"),
+  matchWhiteEngineChoice: document.getElementById("match-white-engine-choice"),
+  matchBlackEngineChoice: document.getElementById("match-black-engine-choice"),
+  matchWhiteStrengthLabel: document.getElementById("match-white-strength-label"),
+  matchBlackStrengthLabel: document.getElementById("match-black-strength-label"),
+  matchWhiteStrengthChoice: document.getElementById("match-white-strength-choice"),
+  matchBlackStrengthChoice: document.getElementById("match-black-strength-choice"),
+  matchMoveTimeSelect: document.getElementById("match-movetime-select"),
+  matchPerspectiveChoice: document.getElementById("match-perspective-choice"),
+  matchStartBtn: document.getElementById("match-start-btn"),
+  matchPauseBtn: document.getElementById("match-pause-btn"),
+  matchStopBtn: document.getElementById("match-stop-btn"),
+  matchScoreIndicator: document.getElementById("match-score-indicator"),
   difficultyChoice: document.getElementById("difficulty-choice"),
   newGameBtn: document.getElementById("new-game-btn"),
   statusText: document.getElementById("status-text"),
@@ -119,6 +154,13 @@ let isProcessingMove = false;
 let gameSaveThrottle = null;
 /** @type {{ from: string, to: string } | null} */
 let pendingPromotion = null;
+let currentPlayMode = "human";
+let matchRunning = false;
+let matchPaused = false;
+let matchPauseRequested = false;
+let matchAbortController = null;
+let matchCurrentAdapter = null;
+let matchScore = { white: 0, black: 0, draws: 0 };
 
 /** @type {import("./ui/DisclaimerModal.js").DisclaimerModal|null} */
 let disclaimerModal = null;
@@ -239,11 +281,17 @@ async function restoreGame(savedState) {
 
 async function handleNewGameRequested() {
   if (isProcessingMove) return;
+  if (currentPlayMode === "match") {
+    await startEngineMatch();
+    return;
+  }
+  stopEngineMatch();
   await initializeGame();
 }
 
 async function handleSquareSelected(square) {
   if (isProcessingMove) return;
+  if (currentPlayMode === "match") return;
   if (!game) return;
   if (game.getCurrentTurn() !== game.getPlayerColor()) return;
   if (game.isGameOver()) return;
@@ -371,7 +419,7 @@ function syncUIWithGame(snapshot) {
   });
 
   // Throttled save to localStorage (max once per 500ms)
-  if (game && !game.isGameOver()) {
+  if (game && !game.isGameOver() && currentPlayMode !== "match") {
     if (gameSaveThrottle) clearTimeout(gameSaveThrottle);
     gameSaveThrottle = setTimeout(() => {
       try {
@@ -384,7 +432,7 @@ function syncUIWithGame(snapshot) {
   }
 
   const isGameOver = snapshot.gameOver || false;
-  if (isGameOver && !previousGameOver && snapshot.result) {
+  if (isGameOver && !previousGameOver && snapshot.result && currentPlayMode !== "match") {
     clearGame();
     const playerColor = snapshot.playerColor;
     gameEndModal.show(snapshot.result, playerColor);
@@ -402,10 +450,408 @@ function syncBusyState(isBusy) {
     dom.thinkingIcon.classList.remove("thinking-icon--active");
     dom.thinkingIcon.classList.remove('blinking');
     dom.statusText.classList.remove("busy");
-    if (game) {
+    if (game && currentPlayMode !== "match") {
       syncUIWithGame(game.getSnapshot());
     }
   }
+}
+
+function setSegmentActive(container, attrName, value) {
+  if (!container) return;
+  container.querySelectorAll("button").forEach((btn) => {
+    const active = btn.getAttribute(attrName) === value;
+    btn.classList.toggle("vd-is-active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+}
+
+function getSegmentValue(container, attrName, fallback) {
+  const active = container?.querySelector("button.vd-is-active");
+  return active?.getAttribute(attrName) || fallback;
+}
+
+function setPlayModeUI(mode) {
+  currentPlayMode = mode === "match" ? "match" : "human";
+  setPlayMode(currentPlayMode);
+  setSegmentActive(dom.playModeChoice, "data-mode", currentPlayMode);
+
+  dom.humanPlaySettings.forEach((el) => {
+    el.hidden = currentPlayMode === "match";
+  });
+  if (dom.matchSettings) dom.matchSettings.hidden = currentPlayMode !== "match";
+  if (dom.newGameBtn?.parentElement) dom.newGameBtn.parentElement.hidden = currentPlayMode === "match";
+  if (dom.matchScoreIndicator) dom.matchScoreIndicator.hidden = currentPlayMode !== "match";
+
+  if (currentPlayMode === "human") {
+    stopEngineMatch();
+    if (!game) dom.statusText.textContent = "Ready. Select settings and click 'New Game' to start.";
+  } else {
+    clearGame();
+    dom.statusText.textContent = "Ready for engine match.";
+    updateMatchControls();
+    updateMatchScoreText();
+  }
+}
+
+function setupEngineMatchControls() {
+  if (!dom.playModeChoice) return;
+
+  dom.playModeChoice.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const mode = target.getAttribute("data-mode");
+    if (mode === "human" || mode === "match") setPlayModeUI(mode);
+  });
+
+  const bindEngineChoice = (container, setter) => {
+    if (!container) return;
+    container.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement)) return;
+      const engine = target.getAttribute("data-engine");
+      if (engine !== "builtin" && engine !== "tomitank") return;
+      setSegmentActive(container, "data-engine", engine);
+      setter(engine);
+      updateMatchStrengthLabels();
+    });
+  };
+
+  bindEngineChoice(dom.matchWhiteEngineChoice, setMatchWhiteEngine);
+  bindEngineChoice(dom.matchBlackEngineChoice, setMatchBlackEngine);
+
+  const bindStrengthChoice = (container, setter) => {
+    if (!container) return;
+    container.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement)) return;
+      const level = Number(target.getAttribute("data-level"));
+      if (Number.isNaN(level) || level < 1 || level > 6) return;
+      setSegmentActive(container, "data-level", String(level));
+      setter(level);
+    });
+  };
+
+  bindStrengthChoice(dom.matchWhiteStrengthChoice, setMatchWhiteStrength);
+  bindStrengthChoice(dom.matchBlackStrengthChoice, setMatchBlackStrength);
+
+  dom.matchPerspectiveChoice?.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const perspective = target.getAttribute("data-perspective");
+    if (perspective !== "white" && perspective !== "black") return;
+    setSegmentActive(dom.matchPerspectiveChoice, "data-perspective", perspective);
+    setMatchPerspective(perspective);
+    if (game && currentPlayMode === "match") renderCurrentBoard();
+  });
+
+  dom.matchMoveTimeSelect?.addEventListener("change", () => {
+    setMatchMoveTime(Number(dom.matchMoveTimeSelect.value));
+  });
+
+  dom.matchStartBtn?.addEventListener("click", () => {
+    startEngineMatch().catch((error) => {
+      console.error("Engine match start failed:", error);
+      updateMatchStatus("Engine match failed to start.");
+      stopEngineMatch();
+    });
+  });
+
+  dom.matchPauseBtn?.addEventListener("click", () => {
+    if (matchPaused) {
+      resumeEngineMatch();
+    } else {
+      requestMatchPause();
+    }
+  });
+
+  dom.matchStopBtn?.addEventListener("click", () => {
+    stopEngineMatch();
+    dom.statusText.textContent = "Engine match stopped.";
+  });
+}
+
+function restoreMatchPreferences() {
+  const mode = getPlayMode();
+  const whiteEngine = getMatchWhiteEngine();
+  const blackEngine = getMatchBlackEngine();
+  const whiteStrength = getMatchWhiteStrength();
+  const blackStrength = getMatchBlackStrength();
+  const movetime = getMatchMoveTime();
+  const perspective = getMatchPerspective();
+
+  setSegmentActive(dom.matchWhiteEngineChoice, "data-engine", whiteEngine);
+  setSegmentActive(dom.matchBlackEngineChoice, "data-engine", blackEngine);
+  setSegmentActive(dom.matchWhiteStrengthChoice, "data-level", String(whiteStrength));
+  setSegmentActive(dom.matchBlackStrengthChoice, "data-level", String(blackStrength));
+  if (dom.matchMoveTimeSelect) dom.matchMoveTimeSelect.value = String(movetime);
+  setSegmentActive(dom.matchPerspectiveChoice, "data-perspective", perspective);
+  updateMatchStrengthLabels();
+  setPlayModeUI(mode);
+}
+
+function getMatchConfig() {
+  const whiteEngine = getSegmentValue(dom.matchWhiteEngineChoice, "data-engine", getMatchWhiteEngine());
+  const blackEngine = getSegmentValue(dom.matchBlackEngineChoice, "data-engine", getMatchBlackEngine());
+  const whiteDifficulty = Number(getSegmentValue(dom.matchWhiteStrengthChoice, "data-level", String(getMatchWhiteStrength()))) || getMatchWhiteStrength();
+  const blackDifficulty = Number(getSegmentValue(dom.matchBlackStrengthChoice, "data-level", String(getMatchBlackStrength()))) || getMatchBlackStrength();
+
+  return {
+    whiteEngine,
+    blackEngine,
+    whiteDifficulty,
+    blackDifficulty,
+    perspective: getSegmentValue(dom.matchPerspectiveChoice, "data-perspective", getMatchPerspective()),
+    movetime: Number(dom.matchMoveTimeSelect?.value) || getMatchMoveTime(),
+  };
+}
+
+function updateMatchStrengthLabels() {
+  const whiteEngine = getSegmentValue(dom.matchWhiteEngineChoice, "data-engine", getMatchWhiteEngine());
+  const blackEngine = getSegmentValue(dom.matchBlackEngineChoice, "data-engine", getMatchBlackEngine());
+  if (dom.matchWhiteStrengthLabel) {
+    dom.matchWhiteStrengthLabel.textContent = `White ${getEngineStrengthControlLabel(whiteEngine)}:`;
+  }
+  if (dom.matchBlackStrengthLabel) {
+    dom.matchBlackStrengthLabel.textContent = `Black ${getEngineStrengthControlLabel(blackEngine)}:`;
+  }
+}
+
+function formatMatchSideLabel(color, engineId, difficulty) {
+  const colorLabel = color === "white" ? "White" : "Black";
+  return `${colorLabel} ${getEngineDisplayName(engineId)} (${getEngineStrengthLabel(engineId, difficulty)})`;
+}
+
+function getMatchSideConfig(config, color) {
+  const isWhite = color === "white";
+  return {
+    engineId: isWhite ? config.whiteEngine : config.blackEngine,
+    difficulty: isWhite ? config.whiteDifficulty : config.blackDifficulty,
+  };
+}
+
+function updateMatchControls() {
+  if (!dom.matchStartBtn || !dom.matchPauseBtn || !dom.matchStopBtn) return;
+  dom.matchStartBtn.disabled = matchRunning && !matchPaused;
+  dom.matchPauseBtn.disabled = !matchRunning && !matchPaused;
+  dom.matchStopBtn.disabled = !matchRunning && !matchPaused;
+  dom.matchPauseBtn.textContent = matchPaused ? "Resume" : (matchPauseRequested ? "Pausing" : "Pause");
+}
+
+function updateMatchScoreText() {
+  if (!dom.matchScoreIndicator) return;
+  dom.matchScoreIndicator.textContent = `Score: White ${matchScore.white} / Draws ${matchScore.draws} / Black ${matchScore.black}`;
+}
+
+function updateMatchStatus(text) {
+  dom.statusText.textContent = text;
+  updateMatchScoreText();
+}
+
+function renderCurrentBoard() {
+  if (!game) return;
+  const snapshot = game.getSnapshot();
+  const perspective = currentPlayMode === "match" ? getMatchConfig().perspective : game.getPlayerColor();
+  boardView.render(game.getBoard(), {
+    perspective,
+    selected: null,
+    legalMoves: [],
+    lastMove: snapshot.lastMove,
+    checkedKingSquare: game.getCheckedKingSquare(),
+  });
+}
+
+async function startEngineMatch() {
+  if (matchRunning || matchPaused) stopEngineMatch();
+
+  const config = getMatchConfig();
+  setMatchWhiteEngine(config.whiteEngine);
+  setMatchBlackEngine(config.blackEngine);
+  setMatchWhiteStrength(config.whiteDifficulty);
+  setMatchBlackStrength(config.blackDifficulty);
+  setMatchMoveTime(config.movetime);
+  setMatchPerspective(config.perspective);
+  clearGame();
+
+  previousGameOver = false;
+  gameEndModal.hide();
+  matchScore = { white: 0, black: 0, draws: 0 };
+  matchRunning = true;
+  matchPaused = false;
+  matchPauseRequested = false;
+  matchAbortController = new AbortController();
+  isProcessingMove = true;
+
+  game = new Game({
+    playerColor: config.perspective,
+    difficulty: config.whiteDifficulty,
+    engine: "builtin",
+    onUpdate: syncUIWithGame,
+  });
+
+  renderCurrentBoard();
+  syncUIWithGame(game.getSnapshot());
+  updateMatchControls();
+  updateMatchStatus("Engine match started.");
+
+  const adapters = {
+    white: createEngineAdapter(config.whiteEngine, { useWorker: true }),
+    black: createEngineAdapter(config.blackEngine, { useWorker: true }),
+  };
+
+  await runEngineMatchLoop(adapters);
+}
+
+async function runEngineMatchLoop(adapters) {
+  while (matchRunning && game && !game.isGameOver()) {
+    if (matchPauseRequested) {
+      matchPaused = true;
+      matchRunning = false;
+      matchPauseRequested = false;
+      isProcessingMove = false;
+      syncBusyState(false);
+      updateMatchControls();
+      updateMatchStatus("Engine match paused.");
+      return;
+    }
+
+    const config = getMatchConfig();
+    const color = game.getCurrentTurn();
+    const sideConfig = getMatchSideConfig(config, color);
+    const engineId = sideConfig.engineId;
+    const adapter = adapters[color] || createEngineAdapter(engineId, { useWorker: true });
+    matchCurrentAdapter = adapter;
+    syncBusyState(true);
+    updateMatchStatus(`${formatMatchSideLabel(color, engineId, sideConfig.difficulty)} is thinking...`);
+
+    try {
+      const move = await adapter.findBestMove(game.state, {
+        difficulty: sideConfig.difficulty,
+        movetime: config.movetime,
+        signal: matchAbortController?.signal,
+        forColor: color,
+        onInfo: (info) => {
+          if (info?.depth) {
+            updateMatchStatus(`${formatMatchSideLabel(color, engineId, sideConfig.difficulty)} search depth ${info.depth}`);
+          }
+        },
+      });
+
+      if (!matchRunning || matchAbortController?.signal.aborted) break;
+      if (!move) {
+        updateMatchStatus(`${getEngineDisplayName(engineId)} returned no legal move.`);
+        break;
+      }
+
+      const result = game.handleEngineMove(move);
+      if (!result.success) {
+        updateMatchStatus(`${getEngineDisplayName(engineId)} produced an illegal move.`);
+        break;
+      }
+
+      renderCurrentBoard();
+      syncUIWithGame(game.getSnapshot());
+      updateMatchScoreText();
+      if (!game.isGameOver()) {
+        const nextColor = game.getCurrentTurn();
+        const nextConfig = getMatchConfig();
+        const nextSide = getMatchSideConfig(nextConfig, nextColor);
+        updateMatchStatus(`Next: ${formatMatchSideLabel(nextColor, nextSide.engineId, nextSide.difficulty)}.`);
+      }
+      await delay(160);
+    } catch (error) {
+      console.error("Engine match error:", error);
+      updateMatchStatus("Engine match error.");
+      break;
+    } finally {
+      matchCurrentAdapter = null;
+      syncBusyState(false);
+    }
+  }
+
+  if (game?.isGameOver()) {
+    const result = game.getSnapshot().result;
+    recordMatchResult(result);
+    updateMatchStatus(formatMatchResult(result, getMatchConfig()));
+  }
+
+  matchRunning = false;
+  matchPaused = false;
+  matchPauseRequested = false;
+  isProcessingMove = false;
+  updateMatchControls();
+}
+
+function requestMatchPause() {
+  if (!matchRunning) return;
+  matchPauseRequested = true;
+  updateMatchControls();
+  updateMatchStatus("Engine match will pause after this move.");
+}
+
+function resumeEngineMatch() {
+  if (!matchPaused || !game) return;
+  const config = getMatchConfig();
+  matchRunning = true;
+  matchPaused = false;
+  matchPauseRequested = false;
+  matchAbortController = new AbortController();
+  isProcessingMove = true;
+  updateMatchControls();
+  runEngineMatchLoop({
+    white: createEngineAdapter(config.whiteEngine, { useWorker: true }),
+    black: createEngineAdapter(config.blackEngine, { useWorker: true }),
+  }).catch((error) => {
+    console.error("Engine match resume failed:", error);
+    updateMatchStatus("Engine match error.");
+    stopEngineMatch();
+  });
+}
+
+function stopEngineMatch() {
+  if (!matchRunning && !matchPaused && !matchAbortController) return;
+  matchRunning = false;
+  matchPaused = false;
+  matchPauseRequested = false;
+  matchAbortController?.abort();
+  matchAbortController = null;
+  matchCurrentAdapter?.stopSearch?.();
+  matchCurrentAdapter = null;
+  isProcessingMove = false;
+  syncBusyState(false);
+  updateMatchControls();
+}
+
+function recordMatchResult(result) {
+  if (!result || result.outcome === "ongoing") return;
+  if (result.winner === "white") matchScore.white += 1;
+  else if (result.winner === "black") matchScore.black += 1;
+  else matchScore.draws += 1;
+  updateMatchScoreText();
+}
+
+function formatMatchResult(result, config) {
+  if (!result || result.outcome === "ongoing") return "Engine match finished.";
+
+  if (result.outcome === "checkmate" && result.winner) {
+    const side = getMatchSideConfig(config, result.winner);
+    const winner = formatMatchSideLabel(result.winner, side.engineId, side.difficulty);
+    return `Checkmate. ${winner} wins.`;
+  }
+
+  if (result.outcome === "stalemate") {
+    return "Engine match drawn by stalemate.";
+  }
+
+  if (result.outcome === "draw") {
+    return `Engine match drawn: ${result.reason || "draw"}.`;
+  }
+
+  return result.reason || "Engine match finished.";
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function setupThemeToggleButton() {
@@ -516,6 +962,8 @@ function restorePreferences() {
   if (savedEngine !== null) {
     controlsView.setSelectedEngine(savedEngine);
   }
+
+  restoreMatchPreferences();
 }
 
 function ensureChangelogModal() {
@@ -546,13 +994,11 @@ function setupMobileMenu() {
   const managedControls = [
     dom.disclaimerInfoBtn,
     dom.githubRepoLink,
-    dom.themeCustomizerBtn,
   ].filter(Boolean);
 
   const mobileLabels = new Map([
     [dom.disclaimerInfoBtn, "About"],
     [dom.githubRepoLink, "GitHub"],
-    [dom.themeCustomizerBtn, "Theme"],
   ]);
 
   const mediaQuery = window.matchMedia("(max-width: 575px)");
@@ -594,15 +1040,12 @@ function setupMobileMenu() {
       if (span) span.remove();
     });
 
-    const [infoBtn, githubLink, customizerBtn] = managedControls;
+    const [infoBtn, githubLink] = managedControls;
     if (infoBtn) {
       dom.headerControls.insertBefore(infoBtn, dom.themeToggleBtn);
     }
     if (githubLink) {
       dom.headerControls.insertBefore(githubLink, dom.themeToggleBtn);
-    }
-    if (customizerBtn) {
-      dom.themeToggleBtn.insertAdjacentElement("afterend", customizerBtn);
     }
     closeMenu();
   };
@@ -675,17 +1118,20 @@ function initBoardSizeControl() {
 async function main() {
   initBoardSizeControl();
   setupThemeToggleButton();
+  setupEngineMatchControls();
   setupMobileMenu();
   setupChangelogTrigger();
   setupDisclaimerInfoButton();
   await setupDisclaimerModal();
   restorePreferences();
 
-  const savedGame = getGame();
+  const savedGame = currentPlayMode === "human" ? getGame() : null;
   if (savedGame) {
     await restoreGame(savedGame);
   } else {
-    dom.statusText.textContent = "Ready. Select settings and click 'New Game' to start.";
+    dom.statusText.textContent = currentPlayMode === "match"
+      ? "Ready for engine match."
+      : "Ready. Select settings and click 'New Game' to start.";
   }
 }
 

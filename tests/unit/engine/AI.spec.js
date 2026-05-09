@@ -174,6 +174,26 @@ test.describe('AI - Transposition Table', () => {
         expect(result.lower).toBe(200);
         expect(result.upper).toBe(50);
     });
+
+    test('should reject transposition table index collisions with different keys', async ({ page }) => {
+        const result = await page.evaluate(async () => {
+            const { AI } = await import('/js/engine/AI.js');
+            const ai = new AI();
+            ai.ttSize = 1;
+            ai.transpositionTable = new Array(1);
+
+            ai.storeTable(1n, 3, 111, 0, { from: 'e2', to: 'e4' });
+            const sameKey = ai.probeTable(1n, 3, -1000, 1000);
+            const collidingKey = ai.probeTable(2n, 3, -1000, 1000);
+            const collidingMove = ai.probeTTMove(2n);
+
+            return { sameKey, collidingKey, collidingMove };
+        });
+
+        expect(result.sameKey).toBe(111);
+        expect(result.collidingKey).toBeNull();
+        expect(result.collidingMove).toBeNull();
+    });
 });
 
 test.describe('AI - Move Ordering', () => {

@@ -5,10 +5,11 @@
  * Runs AI search off the main thread to prevent UI blocking.
  *
  * Messages received:
- *   { type: 'search', state: {...}, level: 1-5, forColor: 'white'|'black', timeout: ms }
+ *   { type: 'search', state: {...}, level: 1-6, forColor: 'white'|'black', timeout: ms }
  *
  * Messages sent:
- *   { type: 'result', move: Move|null }
+ *   { type: 'result', move: Move|null, info?: Object }
+ *   { type: 'info', info: Object }
  *   { type: 'error', message: string }
  */
 
@@ -64,10 +65,11 @@ self.onmessage = async function (event) {
       level: level,
       forColor: forColor,
       timeout: timeout || 10000,
+      onInfo: (info) => self.postMessage({ type: "info", info }),
     });
 
     // Send result back to main thread
-    self.postMessage({ type: "result", move: move });
+    self.postMessage({ type: "result", move: move, info: ai.getLastSearchInfo() });
   } catch (error) {
     // Include stack trace for debugging
     const errorMessage = error.stack

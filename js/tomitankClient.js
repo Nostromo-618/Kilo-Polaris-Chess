@@ -22,6 +22,8 @@ export class TomitankClient {
     this.initialized = false;
     /** @type {((line: string) => void)[]} */
     this.lineListeners = [];
+    /** @type {(() => void)|null} */
+    this.activeSearchStop = null;
   }
 
   /**
@@ -91,6 +93,16 @@ export class TomitankClient {
     this.worker.postMessage("ucinewgame");
   }
 
+  stopSearch() {
+    if (this.worker) {
+      this.worker.postMessage("stop");
+    }
+    if (this.activeSearchStop) {
+      this.activeSearchStop();
+      this.activeSearchStop = null;
+    }
+  }
+
   /**
    * @param {(line: string) => boolean} predicate
    * @param {() => void} send
@@ -122,8 +134,9 @@ export class TomitankClient {
    * @param {number} opts.difficulty — 1..6 → depth hint
    * @returns {Promise<import("./engine/Move.js").Move|null>}
    */
-  async findBestMove(gameState, { movetime, difficulty }) {
+  async findBestMove(gameState, { movetime, difficulty, signal, onInfo } = {}) {
     await this.init();
+    if (signal?.aborted) return null;
 
     const fen = gameStateToFen({
       board: gameState.board,
@@ -134,26 +147,49 @@ export class TomitankClient {
       fullmoveNumber: gameState.fullmoveNumber,
     });
 
-    const depth = difficultyToMaxDepth(difficulty);
+    const depth = getTomitankDepthForDifficulty(difficulty);
     const mt = Math.max(50, Math.floor(movetime));
 
     const legalMoves = generateLegalMoves(gameState.asRulesState());
     if (legalMoves.length === 0) return null;
 
     const uciBest = await new Promise((resolve, reject) => {
+      let settled = false;
       const searchTimeout = setTimeout(() => {
-        unsub();
-        reject(new Error("TomitankChess: search timeout"));
+        finish(() => reject(new Error("TomitankChess: search timeout")));
       }, mt + 3000);
 
+      const finish = (settle) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(searchTimeout);
+        unsub();
+        if (signal) signal.removeEventListener("abort", onAbort);
+        if (this.activeSearchStop === stopCurrentSearch) {
+          this.activeSearchStop = null;
+        }
+        settle();
+      };
+
+      const stopCurrentSearch = () => {
+        if (this.worker) this.worker.postMessage("stop");
+        finish(() => resolve(null));
+      };
+
+      const onAbort = () => stopCurrentSearch();
+
       const unsub = this.subscribeLines((line) => {
+        if (line.startsWith("info ")) {
+          onInfo?.(parseInfoLine(line));
+        }
         const parsed = parseBestMoveLine(line);
         if (parsed !== undefined) {
-          clearTimeout(searchTimeout);
-          unsub();
-          resolve(parsed);
+          finish(() => resolve(parsed));
         }
       });
+
+      if (signal) signal.addEventListener("abort", onAbort, { once: true });
+      this.activeSearchStop = stopCurrentSearch;
 
       this.worker.postMessage(`position fen ${fen}`);
       this.worker.postMessage(`go movetime ${mt} depth ${depth}`);
@@ -166,11 +202,25 @@ export class TomitankClient {
   }
 }
 
+function parseInfoLine(line) {
+  const info = { raw: line };
+  const depth = /\bdepth\s+(\d+)/.exec(line);
+  const nodes = /\bnodes\s+(\d+)/.exec(line);
+  const score = /\bscore\s+(cp|mate)\s+(-?\d+)/.exec(line);
+  if (depth) info.depth = Number(depth[1]);
+  if (nodes) info.nodes = Number(nodes[1]);
+  if (score) {
+    info.scoreType = score[1];
+    info.score = Number(score[2]);
+  }
+  return info;
+}
+
 /**
  * Map UI difficulty 1..6 to UCI depth cap (tomitank default search depth up to 64).
  * @param {number} level
  */
-function difficultyToMaxDepth(level) {
+export function getTomitankDepthForDifficulty(level) {
   const n = Math.max(1, Math.min(6, Number(level) || 6));
   return [2, 4, 6, 10, 14, 18][n - 1];
 }

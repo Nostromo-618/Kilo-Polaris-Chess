@@ -149,6 +149,13 @@ export class DisclaimerModal {
 
             const first = focusable[0];
             const last = focusable[focusable.length - 1];
+            const activeInsideModal = this.modalEl.contains(document.activeElement);
+
+            if (!activeInsideModal) {
+                e.preventDefault();
+                (e.shiftKey ? last : first).focus();
+                return;
+            }
 
             if (e.shiftKey) {
                 if (document.activeElement === first) {

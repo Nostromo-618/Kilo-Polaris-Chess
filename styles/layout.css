@@ -534,6 +534,27 @@
   outline-offset: 2px;
 }
 
+.match-settings[hidden],
+.human-play-setting[hidden] {
+  display: none !important;
+}
+
+.match-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-5, 5px);
+  margin-top: var(--spacing-8, 8px);
+}
+
+.match-actions .vd-btn {
+  width: 100%;
+  min-width: 0;
+}
+
+#match-movetime-select {
+  width: 100%;
+}
+
 /* Board size slider: desktop only (mobile uses full vw width) */
 .board-size-control-desktop {
   display: none;
