@@ -18,6 +18,10 @@ test.describe('Piece Movement', () => {
         await page.click('#new-game-btn');
         // Wait for game to initialize
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
+        await page.evaluate(() => {
+            // Keep these movement tests focused on the player's move.
+            window.requestAnimationFrame = () => 0;
+        });
     });
 
     test('should highlight selected piece', async ({ page }) => {

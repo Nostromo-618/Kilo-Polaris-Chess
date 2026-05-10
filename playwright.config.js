@@ -49,7 +49,7 @@ export default defineConfig({
     {
       name: 'Mobile Chrome',
       use: {
-        ...devices['iPhone 12'],
+        ...devices['Pixel 5'],
       },
     },
   ],

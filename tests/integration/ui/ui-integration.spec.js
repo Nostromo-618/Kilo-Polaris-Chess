@@ -16,6 +16,10 @@ test.describe('UI Integration - BoardView + Game State', () => {
         await page.locator('#color-choice button[data-color="white"]').click();
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
+        await page.evaluate(() => {
+            // Keep these board-state tests focused on the player's move.
+            window.requestAnimationFrame = () => 0;
+        });
     });
 
     test('should update board view after move', async ({ page }) => {
