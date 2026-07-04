@@ -773,11 +773,12 @@
   }
 
   .app-title-icon {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
   }
 
   .app-title-text {
-    font-size: 1.15rem;
+    /* Shrink to fit the full title on narrow screens; 1.15rem truncated it to an ellipsis */
+    font-size: clamp(0.72rem, 3vw, 1rem);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -785,9 +786,9 @@
 
   /* Match reserved slot; keeps one-row header without growing when brain shows */
   .app-title .thinking-icon {
-    width: 1.75rem;
-    height: 1.75rem;
-    font-size: 1.35rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 1.25rem;
   }
 
   .app-version {
