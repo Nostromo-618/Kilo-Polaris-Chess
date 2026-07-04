@@ -1,8 +1,40 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v2.2.0",
+    date: "July 4, 2026",
+    latest: true,
+    columns: [
+      {
+        title: "UI",
+        groups: [
+          {
+            title: "Vanduo Refresh",
+            items: [
+              {
+                icon: "ph-paint-roller",
+                title: "Vanduo v1.7.0",
+                body: "Refreshed the Vanduo Vanilla engine from v1.3.8 to v1.7.0, now loaded from the @vanduo-oss/framework npm distribution via jsDelivr. Brings upstream fixes and security hardening with no change to the look and feel.",
+              },
+              {
+                icon: "ph-swatches",
+                title: "Token namespace shim",
+                body: "Vanduo 1.4.1 moved every design token under the strict --vd-* namespace. Added a small styles/vanduo-compat.css layer that maps the app's theme onto the new tokens, verified pixel-identical to the previous release.",
+              },
+              {
+                icon: "ph-shield-check",
+                title: "Subresource Integrity",
+                body: "Pinned the CDN CSS and JavaScript with SHA-384 integrity hashes and crossorigin, so the browser verifies the Vanduo bundle before executing it.",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: "v2.1.3",
     date: "May 9, 2026",
-    latest: true,
+    latest: false,
     columns: [
       {
         title: "Engine",
