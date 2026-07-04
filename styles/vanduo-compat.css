@@ -1,0 +1,72 @@
+/**
+ * Vanduo token compatibility shim
+ * ================================
+ * Vanduo Framework 1.4.1 removed all unprefixed design-token aliases; every
+ * shipped token now lives under the strict `--vd-*` namespace (see the
+ * framework's TOKENS.md). This app's stylesheets were authored against the
+ * pre-1.4.1 unprefixed names, so this file re-declares each legacy token that
+ * the app actually consumes as an alias of its current `--vd-*` source.
+ *
+ * Scope: ONLY tokens that were BOTH (a) defined by Vanduo <= 1.3.8 and
+ * (b) removed at 1.4.1 are aliased here. Tokens the app references that were
+ * already undefined in 1.3.8 (e.g. --radius-md, --spacing-13/21, --color-text,
+ * --gray-900) are intentionally left alone: they resolved to their inline
+ * fallback / initial value before the bump and continue to do so after it, so
+ * their rendering is unchanged.
+ *
+ * Verified pixel-identical: every aliased value below was confirmed equal
+ * between framework v1.3.8 and v1.7.0 (palette hexes, spacing scale, font
+ * tokens, and shadow definitions all match; semantic tokens track the same
+ * gray steps and re-theme under [data-theme="dark"] via `--vd-*`).
+ *
+ * Load order: AFTER the Vanduo stylesheet (so `--vd-*` are defined) and BEFORE
+ * theme.css / layout.css (which consume the legacy names).
+ *
+ * Migration note: this shim is deliberately minimal and reversible. A future
+ * cleanup can rewrite the consumers to reference `--vd-*` directly and delete
+ * this file.
+ */
+
+:root {
+  /* Semantic colors */
+  --color-primary: var(--vd-color-primary);
+  --color-primary-hover: var(--vd-color-primary-hover);
+  --color-white: var(--vd-color-white);
+  --color-error: var(--vd-color-error);
+  --color-success: var(--vd-color-success);
+
+  /* Raw palette scales (Open Color) — used for accents, gradients, icons */
+  --primary-1: var(--vd-primary-1);
+  --primary-4: var(--vd-primary-4);
+  --primary-6: var(--vd-primary-6);
+  --primary-7: var(--vd-primary-7);
+  --secondary-7: var(--vd-secondary-7);
+  --secondary-8: var(--vd-secondary-8);
+  --gray-0: var(--vd-gray-0);
+  --gray-8: var(--vd-gray-8);
+
+  /* Semantic text / surface / border (re-theme under dark mode via --vd-*) */
+  --text-primary: var(--vd-text-primary);
+  --text-secondary: var(--vd-text-secondary);
+  --text-muted: var(--vd-text-muted);
+  --bg-secondary: var(--vd-bg-secondary);
+  --border-color: var(--vd-border-color);
+
+  /* Elevation */
+  --shadow-xl: var(--vd-shadow-xl);
+  --shadow-2xl: var(--vd-shadow-2xl);
+
+  /* Typography */
+  --font-size-xs: var(--vd-font-size-xs);
+  --font-size-sm: var(--vd-font-size-sm);
+  --font-size-lg: var(--vd-font-size-lg);
+  --font-size-xl: var(--vd-font-size-xl);
+  --font-weight-semibold: var(--vd-font-weight-semibold);
+  --font-family-mono: var(--vd-font-family-mono);
+
+  /* Spacing scale (linear; values identical to Vanduo's --vd-spacing-*) */
+  --spacing-3: var(--vd-spacing-3);
+  --spacing-4: var(--vd-spacing-4);
+  --spacing-5: var(--vd-spacing-5);
+  --spacing-8: var(--vd-spacing-8);
+}

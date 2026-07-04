@@ -1,4 +1,4 @@
-# Aurora Polaris Chess v2.1.3
+# Aurora Polaris Chess v2.2.0
 
 A pure client-side chess game that runs entirely in the browser. Play against a configurable AI with no server—ideal for static hosting (e.g. GitHub Pages).
 
@@ -37,7 +37,7 @@ pnpm run test:baseline    # Aurora v2.1.3 engine release gate
 ## Tech stack
 
 - Vanilla ES modules (no framework)
-- UI: [Vanduo](https://github.com/vanduo-oss/framework) v1.3.8 (loaded from [jsDelivr](https://www.jsdelivr.com/) in `index.html`)
+- UI: [Vanduo](https://github.com/vanduo-oss/framework) Vanilla engine v1.7.0 — the `@vanduo-oss/framework` npm dist loaded from [jsDelivr](https://www.jsdelivr.com/) with SRI in `index.html`; a small [`styles/vanduo-compat.css`](styles/vanduo-compat.css) shim bridges the app's legacy token names onto Vanduo's `--vd-*` namespace
 - Engine: move generation, rules, evaluation, and AI search under `js/engine/`
 - Engine adapter layer: [`js/engineAdapter.js`](js/engineAdapter.js), used by human play and engine matches
 - UCI engine integration: [`vendor/tomitankChess.js`](vendor/tomitankChess.js), loaded in a dedicated Web Worker via [`js/tomitankClient.js`](js/tomitankClient.js)
