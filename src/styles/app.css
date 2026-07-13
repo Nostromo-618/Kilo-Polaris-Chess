@@ -1,0 +1,831 @@
+/**
+ * Refreshed chrome styles for Aurora Polaris Chess (header, layout, side panel,
+ * status, move history, dialogs). Consumes vd3 --vd-* tokens directly, plus the
+ * app tokens from tokens-bridge.css. The chess board itself lives in board.css.
+ */
+
+/* ── App shell + layout ────────────────────────────────────────────────── */
+#app-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-21, 21px);
+  flex: 1 1 auto;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.board-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.app-aside {
+  min-width: 0;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 0.5rem;
+}
+
+.app-header-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-21, 21px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.75rem;
+}
+
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  min-width: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--color-primary);
+}
+
+.app-title-icon {
+  font-size: 1.4em;
+  flex-shrink: 0;
+}
+
+.app-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Reserve a fixed slot so header height is stable when the AI is thinking. */
+.thinking-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.7rem;
+  height: 1.7rem;
+  font-size: 1.4rem;
+  color: var(--color-primary);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.thinking-icon--active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.header-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--transition-fast), color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.header-icon-btn:hover,
+.header-icon-btn:focus-visible {
+  background: var(--vd-bg-secondary);
+  color: var(--color-primary);
+  outline: none;
+}
+
+.mobile-menu-toggle {
+  display: none;
+}
+
+/* Offcanvas mobile menu list */
+.header-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+
+.header-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header-menu-item:hover {
+  background: var(--vd-bg-secondary);
+}
+
+/* ── Side panel card ───────────────────────────────────────────────────── */
+.side-panel.vd-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  height: fit-content;
+}
+
+.panel-heading {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.new-game-action {
+  width: 100%;
+}
+
+.new-game-btn.vd-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ── Settings groups + segmented controls ──────────────────────────────── */
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.settings-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.settings-note {
+  margin: 0.15rem 0 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.segmented.vd-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.segmented.vd-btn-group > .vd-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* Selected segment: filled primary */
+.segmented.vd-btn-group > .vd-btn.vd-is-active {
+  z-index: 1;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.segmented.vd-btn-group > .vd-btn.vd-is-active:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: var(--color-white);
+}
+
+.segmented.vd-btn-group > .vd-btn.vd-is-active:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Locked settings (can't change mid-game): dim + not-allowed, keep the active
+   segment legible so the current game's value still reads. */
+.settings-group.is-locked {
+  cursor: help;
+}
+
+.settings-group.is-locked .settings-label {
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.settings-lock {
+  font-size: 0.85em;
+  opacity: 0.9;
+}
+
+.segmented.vd-btn-group > .vd-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.segmented.vd-btn-group > .vd-btn.vd-is-active:disabled {
+  opacity: 0.7;
+}
+
+/* ── Engine match settings ─────────────────────────────────────────────── */
+.match-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.match-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.match-actions .vd-btn {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ── Status ────────────────────────────────────────────────────────────── */
+.status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.status-text {
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 0;
+}
+
+.status-bar.is-busy .status-text {
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.status-thinking .ph-brain {
+  margin-right: 0.3rem;
+}
+
+.status-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.status-sub {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.status-score {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Move history ──────────────────────────────────────────────────────── */
+.history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.move-history-empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+/* ── Side panel footer ─────────────────────────────────────────────────── */
+.side-panel-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.app-version {
+  display: inline-block;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: 9999px;
+  padding: 0.2em 0.7em;
+  letter-spacing: 0.02em;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.app-version:hover,
+.app-version:focus-visible {
+  background: var(--color-primary);
+  color: var(--color-white);
+  outline: none;
+}
+
+.side-panel-attribution {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.side-panel-attribution a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.side-panel-attribution a:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+/* ── Board size slider (desktop only) ──────────────────────────────────── */
+.board-size-control-desktop {
+  display: none;
+  width: 100%;
+  max-width: min(100%, var(--board-max-width, 800px));
+}
+
+.board-size-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+/* ── Move history list (from the shared entry) ─────────────────────────── */
+.move-history-list {
+  list-style: decimal;
+  list-style-position: inside;
+  padding: 0;
+  margin: 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.move-history-list li {
+  padding: var(--spacing-5, 5px) var(--spacing-8, 8px);
+  border-bottom: 1px solid var(--border-color);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+
+.move-history-list li:hover {
+  background: var(--bg-secondary);
+}
+
+.move-history-list li:last-child {
+  border-bottom: none;
+}
+
+.move-history-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.move-history-list::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 999px;
+  opacity: 0.5;
+}
+
+/* ── Busy indicator: only the brain icon slowly pulses while the AI thinks ─ */
+@keyframes thinking-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.blinking {
+  animation: thinking-blink 1.8s ease-in-out infinite;
+}
+
+/* ── Game-end modal ────────────────────────────────────────────────────── */
+.game-end-body {
+  text-align: center;
+}
+
+.game-end-icon {
+  font-size: 4rem;
+  line-height: 1;
+  margin-bottom: 0.75rem;
+  animation: modalIconPop 0.4s ease-out;
+}
+
+@keyframes modalIconPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.game-end-message {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Tone-coloured title (scoped via :has() — vd3's Teleport root drops fallthrough
+   class/id, so modal-level styles hook onto marker elements in the slots). */
+.vd-modal:has(.game-end-tone-victory) .vd-modal-title {
+  color: var(--color-success);
+}
+.vd-modal:has(.game-end-tone-defeat) .vd-modal-title {
+  color: var(--color-error);
+}
+.vd-modal:has(.game-end-tone-draw) .vd-modal-title {
+  color: var(--color-primary);
+}
+
+/* ── Disclaimer modal (mandatory) ──────────────────────────────────────── */
+/* Hide vd3's built-in close button — the only exit is "Accept & Play". */
+.vd-modal:has(.disclaimer-scope) .vd-modal-header > button[aria-label="Close"] {
+  display: none;
+}
+
+.vd-modal:has(.disclaimer-scope) .vd-modal-header {
+  padding: 0;
+  border: none;
+}
+
+.disclaimer-modal-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: var(--spacing-21, 21px);
+  background: linear-gradient(135deg, var(--primary-6) 0%, var(--primary-4) 100%);
+}
+
+.disclaimer-modal-icon {
+  font-size: 3rem;
+  color: #fff;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+}
+
+.disclaimer-modal-title {
+  color: #fff;
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin: 0;
+}
+
+.disclaimer-intro {
+  margin-top: 0;
+  color: var(--text-secondary);
+}
+
+.disclaimer-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.disclaimer-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.disclaimer-li-body {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.disclaimer-list li > i {
+  color: var(--primary-6);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.1em;
+}
+
+.disclaimer-inline-link {
+  color: var(--primary-6);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.disclaimer-inline-link:hover {
+  color: var(--primary-7);
+}
+
+.disclaimer-footnote {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+.disclaimer-accept-btn.vd-btn {
+  min-width: 200px;
+  gap: 0.5rem;
+}
+
+[data-theme="dark"] .disclaimer-list li {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Changelog modal ───────────────────────────────────────────────────── */
+.changelog-subtitle {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-muted);
+}
+
+.version-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.version-header {
+  padding: 0.5rem 0.8rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.version-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.version-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.version-body {
+  padding: 0.8rem;
+}
+
+.changelog-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.changelog-column-title {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.change-group h5 {
+  margin: 0 0 0.5rem;
+}
+
+.change-list {
+  list-style: none;
+  margin: 0 0 0.8rem;
+  padding: 0;
+}
+
+.change-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.change-item:last-child {
+  border-bottom: none;
+}
+
+.change-item > i {
+  color: var(--primary-6);
+  margin-top: 0.2rem;
+}
+
+.change-item strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.change-item p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* ── Landscape dialogs: widen well past vd3's default, cap to viewport,
+      scroll the body. (vd3's lg panel is 610px — too portrait here.) ─────── */
+.vd-modal:has(.disclaimer-scope) .vd-modal-panel {
+  --vd-modal-dialog-max-width: min(94vw, 920px);
+  max-height: calc(100dvh - 1.5rem);
+  margin: 0.75rem auto;
+}
+
+.vd-modal:has(.changelog-scope) .vd-modal-panel {
+  --vd-modal-dialog-max-width: min(94vw, 1000px);
+  max-height: calc(100dvh - 1.5rem);
+  margin: 0.75rem auto;
+}
+
+.vd-modal:has(.disclaimer-scope) .vd-modal-body,
+.vd-modal:has(.changelog-scope) .vd-modal-body {
+  max-height: none;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Disclaimer terms read as a landscape 2-column grid on wider screens; the
+   "support" item spans the full width as a footer CTA. */
+@media (min-width: 700px) {
+  .disclaimer-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+  .disclaimer-list li:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── Theme customizer: hide vd3's built-in FAB (the header paint-roller opens
+      it via the vd:open-customizer event) and re-anchor the panel as a
+      dropdown directly under that top-right control. ────────────────────── */
+[data-theme-customizer-trigger] {
+  display: none !important;
+}
+
+/* !important is needed to beat vd3's higher-specificity `.is-open` drawer rules;
+   this is a deliberate consumer override of the library component's position.
+   `right` aligns the dropdown's right edge under the header paint-roller (which
+   sits 21px inside the 1200px-max header). */
+body > .vd-theme-customizer-panel {
+  position: fixed !important;
+  top: 68px !important;
+  right: max(1rem, calc((100vw - 1200px) / 2 + 21px)) !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: min(340px, calc(100vw - 2rem)) !important;
+  max-width: min(340px, calc(100vw - 2rem)) !important;
+  max-height: calc(100vh - 88px) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-2xl) !important;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px) !important;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    visibility 0.2s ease !important;
+}
+
+body > .vd-theme-customizer-panel.is-open {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+}
+
+/* Transparent, click-through-to-close overlay so clicking outside dismisses the
+   dropdown (no full-screen dim). */
+body > .vd-theme-customizer-overlay {
+  display: block;
+  background: transparent;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (min-width: 992px) {
+  .board-size-control-desktop {
+    display: block;
+  }
+}
+
+@media (max-width: 991px) {
+  .app-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .board-section {
+    order: 1;
+  }
+
+  .app-aside {
+    order: 2;
+  }
+
+  .changelog-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .app-main {
+    padding: 0.75rem;
+  }
+
+  .app-header-inner {
+    padding: 0 0.75rem;
+  }
+
+  .app-title {
+    font-size: var(--font-size-lg);
+  }
+
+  .header-controls {
+    display: none;
+  }
+
+  .mobile-menu-toggle {
+    display: inline-flex;
+  }
+}

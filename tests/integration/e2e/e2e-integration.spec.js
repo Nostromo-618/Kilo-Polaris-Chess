@@ -143,9 +143,8 @@ test.describe('E2E Integration - Complete Game Flow', () => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Verify modal container exists
-        const modalContainer = await page.locator('#game-end-modal-container');
-        await expect(modalContainer).toBeAttached();
+        // The vd3 game-end dialog is teleported on demand; it must be absent mid-game.
+        await expect(page.locator('#game-end-modal')).toHaveCount(0);
     });
 
     test('should show stalemate in UI', async ({ page }) => {
@@ -282,7 +281,7 @@ test.describe('E2E Integration - Theme Persistence', () => {
     });
 
     test('should persist theme across reloads', async ({ page }) => {
-        await page.evaluate(() => localStorage.setItem('kpc-theme', 'light'));
+        await page.evaluate(() => localStorage.setItem('vanduo-theme-preference', 'light'));
         await page.reload();
         await page.click('#theme-toggle-btn');
 
@@ -296,7 +295,7 @@ test.describe('E2E Integration - Theme Persistence', () => {
     });
 
     test('should persist Light theme across reloads', async ({ page }) => {
-        await page.evaluate(() => localStorage.setItem('kpc-theme', 'system'));
+        await page.evaluate(() => localStorage.setItem('vanduo-theme-preference', 'system'));
         await page.reload();
         await page.click('#theme-toggle-btn');
 
@@ -346,28 +345,27 @@ test.describe('E2E Integration - Concurrent Operations', () => {
         await expect(page.locator('.chess-piece.has-piece')).toHaveCount(32);
     });
 
-    test('should handle difficulty change during game', async ({ page }) => {
+    test('allows changing difficulty during a game (applies live)', async ({ page }) => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Change difficulty
-        await page.locator('#difficulty-choice button[data-level="3"]').click();
-
-        // Game should continue
-        const pieces = await page.locator('.chess-piece').count();
-        expect(pieces).toBeGreaterThan(0);
+        // Strength stays editable mid-game and applies to the current game.
+        const level6 = page.locator('#difficulty-choice button[data-level="6"]');
+        await expect(level6).toBeEnabled();
+        await level6.click();
+        await expect(level6).toHaveClass(/vd-is-active/);
+        await expect(page.locator('.chess-piece')).not.toHaveCount(0);
     });
 
-    test('should handle color change during game', async ({ page }) => {
+    test('allows changing color during a game', async ({ page }) => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Change color
-        await page.click('#color-choice button[data-color="black"]');
-
-        // Game should continue
-        const pieces = await page.locator('.chess-piece').count();
-        expect(pieces).toBeGreaterThan(0);
+        const black = page.locator('#color-choice button[data-color="black"]');
+        await expect(black).toBeEnabled();
+        await black.click();
+        await expect(black).toHaveClass(/vd-is-active/);
+        await expect(page.locator('.chess-piece')).not.toHaveCount(0);
     });
 });
 
@@ -423,9 +421,8 @@ test.describe('E2E Integration - Error Handling', () => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Verify modal container exists
-        const modalContainer = await page.locator('#game-end-modal-container');
-        await expect(modalContainer).toBeAttached();
+        // The vd3 game-end dialog is teleported on demand; it must be absent mid-game.
+        await expect(page.locator('#game-end-modal')).toHaveCount(0);
     });
 });
 

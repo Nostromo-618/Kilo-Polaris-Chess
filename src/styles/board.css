@@ -1,0 +1,255 @@
+/**
+ * Chess board island styles — kept 1:1 from the vanilla app (BoardView renders
+ * this DOM imperatively). Consumes the app tokens from tokens-bridge.css.
+ */
+
+/* ── Board container ───────────────────────────────────────────────────── */
+#board-container {
+  width: 100%;
+  max-width: min(100%, var(--board-max-width, 800px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--board-dark);
+  border-radius: var(--card-border-radius, var(--radius-lg));
+  box-shadow: var(--shadow-2xl);
+  border: 4px solid var(--gray-8);
+}
+
+.chess-board-grid {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  container-type: size;
+  container-name: chess-board;
+  align-self: start;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ── Squares ───────────────────────────────────────────────────────────── */
+.chess-square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  font-size: clamp(0.875rem, 8cqmin, 3.25rem);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast),
+    box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+@supports not (font-size: 1cqmin) {
+  .chess-square {
+    font-size: clamp(1.6rem, 3.75vw, 2.85rem);
+  }
+}
+
+.chess-square.light {
+  background-color: var(--board-light);
+}
+
+.chess-square.dark {
+  background-color: var(--board-dark);
+}
+
+.chess-square.highlight-selected {
+  background-color: var(--board-highlight) !important;
+  box-shadow: inset 0 0 0 2px var(--board-highlight);
+}
+
+.chess-square.highlight-legal::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 26%;
+  height: 26%;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background-color: var(--board-legal-move);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.chess-square.highlight-last-move {
+  background-color: var(--board-last-move) !important;
+  box-shadow: inset 0 0 0 2px var(--board-last-move);
+}
+
+.chess-square.highlight-in-check {
+  background-color: rgba(220, 38, 38, 0.24) !important;
+  box-shadow: inset 0 0 0 3px rgba(220, 38, 38, 0.82);
+}
+
+.chess-square.highlight-in-check.highlight-selected {
+  background-color: rgba(220, 38, 38, 0.2) !important;
+  box-shadow: inset 0 0 0 2px var(--board-highlight),
+    inset 0 0 0 5px rgba(220, 38, 38, 0.88);
+}
+
+.chess-square.highlight-in-check.highlight-last-move {
+  background-color: rgba(220, 38, 38, 0.18) !important;
+  box-shadow: inset 0 0 0 2px var(--board-last-move),
+    inset 0 0 0 5px rgba(220, 38, 38, 0.85);
+}
+
+/* ── Pieces ────────────────────────────────────────────────────────────── */
+.chess-piece {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  z-index: 2;
+  line-height: 0;
+  user-select: none;
+  cursor: pointer;
+}
+
+.chess-piece-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* ── Promotion picker overlay ──────────────────────────────────────────── */
+.promotion-picker-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+}
+
+.promotion-picker {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  width: 12.5%;
+  border: 2px solid #000;
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow), 0 0 14px 3px rgba(99, 102, 241, 0.4),
+    0 8px 30px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.promotion-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  cursor: pointer;
+  background-color: #32cd32;
+  transition: background-color 0.1s ease;
+}
+
+.promotion-picker-option:nth-child(even) {
+  background-color: #228b22;
+}
+
+.promotion-picker-option:hover {
+  background-color: #90ee90 !important;
+}
+
+.promotion-picker-img {
+  display: block;
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* ── Coordinate labels ─────────────────────────────────────────────────── */
+.chess-file-labels {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+}
+
+.chess-file-label {
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 2px 0;
+  user-select: none;
+}
+
+.chess-rank-labels {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.chess-rank-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+  user-select: none;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Responsive board sizing ───────────────────────────────────────────── */
+@media (max-width: 991px) {
+  #board-container {
+    max-width: none;
+    width: min(100%, 86vw, var(--board-max-width, 800px));
+    max-height: none;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: hidden;
+  }
+
+  .chess-rank-labels {
+    width: 14px;
+  }
+}
+
+@media (max-width: 575px) {
+  #board-container {
+    width: min(100%, 94vw, var(--board-max-width, 800px));
+  }
+
+  .chess-rank-labels {
+    width: 12px;
+  }
+
+  .chess-file-label,
+  .chess-rank-label {
+    font-size: 0.6rem;
+  }
+}

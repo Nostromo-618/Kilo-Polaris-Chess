@@ -1,8 +1,55 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v3.0.0",
+    date: "July 12, 2026",
+    latest: true,
+    columns: [
+      {
+        title: "UI",
+        groups: [
+          {
+            title: "Vanduo UI (vd3) — Vue 3 rebuild",
+            items: [
+              {
+                icon: "ph-rocket-launch",
+                title: "Rebuilt on Vue 3 + Vite",
+                body: "The interface was re-platformed from the Vanduo Vanilla engine to Vanduo UI (vd3), a Vue 3 design system, built with Vite. The chess engine, rules, and board rendering are unchanged; the header, control panel, dialogs, and theming are now real vd3 components.",
+              },
+              {
+                icon: "ph-paint-roller",
+                title: "Refreshed look + theme customizer",
+                body: "A polished pass over the side panel, status, and dialogs, plus the full vd3 theme customizer (palette, primary color, neutral, radius, font) alongside the light/dark/system switcher — with your preferences persisted across visits.",
+              },
+              {
+                icon: "ph-package",
+                title: "Static build",
+                body: "The app now builds to static assets with Vite for GitHub Pages, replacing the buildless setup. Web Workers (Aurora search and the Tomitank UCI engine) are bundled as discrete chunks.",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Engine",
+        groups: [
+          {
+            title: "TomitankChess 7.0",
+            items: [
+              {
+                icon: "ph-cpu",
+                title: "Upgraded to 7.0",
+                body: "Updated the vendored TomitankChess (GPL-3.0) from 6.0 to 7.0 — a drop-in UCI-compatible update that is roughly 30% faster (bit-manipulation move generation and magic bitboards) with a refined evaluation, for modestly stronger play at every difficulty.",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: "v2.2.0",
     date: "July 4, 2026",
-    latest: true,
+    latest: false,
     columns: [
       {
         title: "UI",

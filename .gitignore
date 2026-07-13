@@ -3,6 +3,11 @@
 # npm / Node.js
 node_modules/
 
+# Vite build output + cache
+dist/
+.vite/
+*.local
+
 # Playwright
 playwright-report/
 test-results/

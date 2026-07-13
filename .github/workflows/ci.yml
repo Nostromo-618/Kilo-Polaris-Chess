@@ -6,26 +6,36 @@ on:
   pull_request:
     branches: [main]
 
+# NOTE: This app now consumes @vanduo-oss/vd3 (Vue 3 UI). Until vd3 is published
+# to npm it is a local `link:../../0_vanduo/vd3` dependency, which does NOT resolve
+# on a clean CI runner — `pnpm install` will fail until the dependency is flipped
+# to a published range (see README "Building & deploying"). The engine tests and
+# app are green locally in the meantime.
+
 jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: 24
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        run: pnpm exec playwright install chromium --with-deps
 
       - name: Run quick tests
-        run: npm run test:quick
+        run: pnpm run test:quick
 
       - name: Upload test report
         if: always()
@@ -43,18 +53,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: 24
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        run: pnpm exec playwright install chromium --with-deps
 
       - name: Run full game tests
-        run: npm run test:full-game
+        run: pnpm run test:full-game
 
       - name: Upload test report
         if: always()

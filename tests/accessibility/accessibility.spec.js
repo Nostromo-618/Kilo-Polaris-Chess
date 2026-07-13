@@ -103,7 +103,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
     test('should close modal with Escape key', async ({ page }) => {
         // Open theme customizer
-        await page.click('[data-theme-customizer-trigger]');
+        await page.evaluate(() => window.dispatchEvent(new Event('vd:open-customizer')));
 
         // Press Escape
         await page.keyboard.press('Escape');
@@ -180,7 +180,8 @@ test.describe('Accessibility - Screen Reader Support', () => {
         await page.evaluate(() => localStorage.clear());
         await page.reload();
 
-        const modal = await page.locator('#disclaimer-modal');
+        // vd3's VdModal root carries role="dialog" (the disclaimer content lives inside it).
+        const modal = page.locator('.vd-modal').first();
         const role = await modal.getAttribute('role');
 
         expect(role).toBe('dialog');
@@ -214,16 +215,16 @@ test.describe('Accessibility - Focus Management', () => {
     test('should trap focus in modal', async ({ page }) => {
         await page.evaluate(() => localStorage.clear());
         await page.reload();
-        await page.waitForSelector('#disclaimer-modal.is-open', { timeout: 15000 });
+        await page.waitForSelector('#disclaimer-modal', { state: 'visible', timeout: 15000 });
 
         // Tab through modal
         await page.keyboard.press('Tab');
         await page.keyboard.press('Tab');
         await page.keyboard.press('Tab');
 
-        // Focus should stay in modal
+        // Focus should stay within vd3's modal panel (the dialog container).
         const focusedModal = await page.evaluate(() => {
-            const modal = document.querySelector('#disclaimer-modal');
+            const modal = document.querySelector('.vd-modal');
             return modal?.contains(document.activeElement);
         });
 
@@ -231,7 +232,7 @@ test.describe('Accessibility - Focus Management', () => {
     });
 
     test('should restore focus after modal close', async ({ page }) => {
-        await page.click('[data-theme-customizer-trigger]');
+        await page.evaluate(() => window.dispatchEvent(new Event('vd:open-customizer')));
         await page.keyboard.press('Escape');
         await page.waitForTimeout(300);
 

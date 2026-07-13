@@ -276,7 +276,7 @@ test.describe('UI Performance - Theme Switching', () => {
     });
 
     test('should persist theme without delay', async ({ page }) => {
-        await page.evaluate(() => localStorage.setItem('kpc-theme', 'light'));
+        await page.evaluate(() => localStorage.setItem('vanduo-theme-preference', 'light'));
         await page.reload();
         await page.click('#theme-toggle-btn');
 

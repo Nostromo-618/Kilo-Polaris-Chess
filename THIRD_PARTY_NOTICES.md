@@ -10,7 +10,7 @@ This file satisfies attribution and license notice requirements for bundled thir
 
 **Upstream project:** [tomitank/tomitankChess](https://github.com/tomitank/tomitankChess)
 
-**Version:** 6.0 (see `VERSION` and header inside `vendor/tomitankChess.js`)
+**Version:** 7.0 — dated 2026-07-05, obtained from the upstream `master` branch (see `VERSION` and header inside `vendor/tomitankChess.js`)
 
 **Copyright and attribution:**  
 `tomitankChess` is copyright **© 2017–2026 Tamas Kuzmics** (spelling as in upstream; see the license block at the top of `vendor/tomitankChess.js`). Upstream contact appears in that file (e.g. tanky.hu@gmail.com).

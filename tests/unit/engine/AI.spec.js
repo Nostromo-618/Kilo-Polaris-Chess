@@ -414,6 +414,9 @@ test.describe('AI - Search Algorithms', () => {
 });
 
 test.describe('AI - Difficulty Levels', () => {
+    // Note: no game is started here — difficulty is a new-game setting and is
+    // locked while a game is in progress, so each test sets it, then starts the
+    // game itself.
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
         await page.evaluate(() => {
@@ -421,8 +424,6 @@ test.describe('AI - Difficulty Levels', () => {
         });
         await page.reload();
         await page.locator('#color-choice button[data-color="white"]').click();
-        await page.click('#new-game-btn');
-        await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
     test('should use different randomness levels for each difficulty', async ({ page }) => {
@@ -449,6 +450,8 @@ test.describe('AI - Difficulty Levels', () => {
         test.slow();
 
         await page.locator('#difficulty-choice button[data-level="1"]').click();
+        await page.click('#new-game-btn');
+        await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
         // Make a move and verify AI responds
         await page.click('.chess-square[data-square="e2"]');

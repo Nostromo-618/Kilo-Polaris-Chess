@@ -76,9 +76,8 @@ test.describe('Full Game Flow', () => {
         await page.click('#new-game-btn');
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
 
-        // Verify the game-end modal container exists
-        const modalContainer = page.locator('#game-end-modal-container');
-        await expect(modalContainer).toBeAttached();
+        // The vd3 game-end dialog is teleported on demand — absent before game end.
+        await expect(page.locator('#game-end-modal')).toHaveCount(0);
 
         // Modal content should not be visible before game ends
         // Check that status text does not indicate game is over

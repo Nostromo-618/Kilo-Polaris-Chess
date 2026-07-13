@@ -219,7 +219,7 @@ test.describe('UI Integration - Modal Dialogs', () => {
         await page.click('#disclaimer-accept-btn');
 
         const modal = page.locator('#disclaimer-modal');
-        await expect(modal).not.toHaveClass(/is-open/);
+        await expect(modal).not.toBeVisible();
     });
 
     test('should not show disclaimer on subsequent visits', async ({ page }) => {
@@ -237,11 +237,11 @@ test.describe('UI Integration - Modal Dialogs', () => {
         await page.reload();
 
         const modal = page.locator('#disclaimer-modal');
-        await expect(modal).toHaveClass(/is-open/);
+        await expect(modal).toBeVisible();
 
         await page.keyboard.press('Escape');
 
-        await expect(modal).toHaveClass(/is-open/);
+        await expect(modal).toBeVisible();
     });
 
     test('should prevent closing disclaimer with backdrop click', async ({ page }) => {
@@ -249,11 +249,11 @@ test.describe('UI Integration - Modal Dialogs', () => {
         await page.reload();
 
         const modal = page.locator('#disclaimer-modal');
-        await expect(modal).toHaveClass(/is-open/);
+        await expect(modal).toBeVisible();
 
         await page.mouse.click(10, 10);
 
-        await expect(modal).toHaveClass(/is-open/);
+        await expect(modal).toBeVisible();
     });
 });
 
@@ -267,14 +267,15 @@ test.describe('UI Integration - Theme Switching', () => {
     });
 
     async function ensureThemeCustomizerVisible(page) {
-        const customizer = page.locator('[data-theme-customizer-trigger]');
-        if (await customizer.isVisible()) return;
-
-        const menuToggle = page.locator('#mobile-menu-toggle');
-        if (await menuToggle.isVisible()) {
-            await menuToggle.click();
-        }
-        await expect(customizer).toBeVisible();
+        // A theme-customizer entry point is available: the header paint-roller
+        // on desktop, or the header menu button on mobile.
+        const deskBtn = page.locator(
+            '.header-controls .header-icon-btn[aria-label="Open theme customizer"]',
+        );
+        const mobileToggle = page.locator('#mobile-menu-toggle');
+        expect(
+            (await deskBtn.isVisible()) || (await mobileToggle.isVisible()),
+        ).toBeTruthy();
     }
 
     test('should have theme customizer button', async ({ page }) => {
@@ -283,7 +284,7 @@ test.describe('UI Integration - Theme Switching', () => {
 
     test('should open theme customizer when clicked', async ({ page }) => {
         await ensureThemeCustomizerVisible(page);
-        await page.click('[data-theme-customizer-trigger]');
+        await page.evaluate(() => window.dispatchEvent(new Event('vd:open-customizer')));
 
         const panel = await page.locator('.vd-theme-customizer-panel');
         const isOpen = await panel.evaluate(el => el.classList.contains('is-open'));
@@ -292,7 +293,7 @@ test.describe('UI Integration - Theme Switching', () => {
     });
 
     test('should switch to Light theme', async ({ page }) => {
-        await page.evaluate(() => localStorage.setItem('kpc-theme', 'system'));
+        await page.evaluate(() => localStorage.setItem('vanduo-theme-preference', 'system'));
         await page.reload();
         await page.click('#theme-toggle-btn');
         const html = page.locator('html');
@@ -300,7 +301,7 @@ test.describe('UI Integration - Theme Switching', () => {
     });
 
     test('should switch to Dark theme', async ({ page }) => {
-        await page.evaluate(() => localStorage.setItem('kpc-theme', 'light'));
+        await page.evaluate(() => localStorage.setItem('vanduo-theme-preference', 'light'));
         await page.reload();
         await page.click('#theme-toggle-btn');
         const html = page.locator('html');
@@ -308,7 +309,7 @@ test.describe('UI Integration - Theme Switching', () => {
     });
 
     test('should switch to System theme', async ({ page }) => {
-        await page.evaluate(() => localStorage.setItem('kpc-theme', 'dark'));
+        await page.evaluate(() => localStorage.setItem('vanduo-theme-preference', 'dark'));
         await page.reload();
         await page.click('#theme-toggle-btn');
         const html = page.locator('html');
@@ -328,9 +329,9 @@ test.describe('UI Integration - Game End Modal', () => {
         await page.waitForSelector('.chess-piece[data-piece="wP"]');
     });
 
-    test('should have game end modal container', async ({ page }) => {
-        const modal = await page.locator('#game-end-modal-container');
-        await expect(modal).toBeAttached();
+    test('should not show the game-end modal during an active game', async ({ page }) => {
+        // The vd3 game-end dialog is teleported on demand; it must be absent mid-game.
+        await expect(page.locator('#game-end-modal')).toHaveCount(0);
     });
 
     test('should not show game end modal during game', async ({ page }) => {

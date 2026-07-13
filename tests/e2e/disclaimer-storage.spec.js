@@ -38,7 +38,7 @@ test.describe('Disclaimer Modal', () => {
 
         const modal = page.locator('#disclaimer-modal');
         await expect(modal).toBeVisible();
-        await expect(modal).toHaveClass(/is-open/);
+        await expect(modal).toBeVisible();
     });
 
     test('displays title and accept button', async ({ page }) => {
@@ -52,22 +52,22 @@ test.describe('Disclaimer Modal', () => {
         await freshPage(page);
 
         const modal = page.locator('#disclaimer-modal');
-        await expect(modal).toHaveClass(/is-open/);
+        await expect(modal).toBeVisible();
 
         await page.keyboard.press('Escape');
 
-        await expect(modal).toHaveClass(/is-open/);
+        await expect(modal).toBeVisible();
     });
 
     test('cannot be closed by clicking the backdrop', async ({ page }) => {
         await freshPage(page);
 
         const modal = page.locator('#disclaimer-modal');
-        await expect(modal).toHaveClass(/is-open/);
+        await expect(modal).toBeVisible();
 
         await page.mouse.click(10, 10);
 
-        await expect(modal).toHaveClass(/is-open/);
+        await expect(modal).toBeVisible();
     });
 
     test('Accept button closes modal and sets localStorage', async ({ page }) => {
@@ -76,7 +76,7 @@ test.describe('Disclaimer Modal', () => {
         await page.click('#disclaimer-accept-btn');
 
         const modal = page.locator('#disclaimer-modal');
-        await expect(modal).not.toHaveClass(/is-open/);
+        await expect(modal).not.toBeVisible();
 
         // localStorage should be set
         const accepted = await page.evaluate(() => localStorage.getItem('kpc-disclaimer-accepted'));
@@ -91,7 +91,7 @@ test.describe('Disclaimer Modal', () => {
         const modal = page.locator('#disclaimer-modal');
         const exists = await modal.count();
         if (exists > 0) {
-            await expect(modal).not.toHaveClass(/is-open/);
+            await expect(modal).not.toBeVisible();
         }
     });
 });

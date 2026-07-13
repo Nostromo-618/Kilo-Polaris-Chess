@@ -15,52 +15,66 @@ test.describe('UI Controls', () => {
         await page.reload();
     });
 
-    async function ensureThemeCustomizerVisible(page) {
-        const customizer = page.locator('[data-theme-customizer-trigger]');
-        if (await customizer.isVisible()) return;
-
-        const menuToggle = page.locator('#mobile-menu-toggle');
-        if (await menuToggle.isVisible()) {
-            await menuToggle.click();
+    // Open vd3's VdThemeCustomizer via the header paint-roller (desktop) or the
+    // mobile offcanvas ("Customize theme").
+    async function openThemeCustomizer(page) {
+        const deskBtn = page.locator(
+            '.header-controls .header-icon-btn[aria-label="Open theme customizer"]',
+        );
+        if (await deskBtn.isVisible()) {
+            await deskBtn.click();
+            return;
         }
-        await expect(customizer).toBeVisible();
+        await page.locator('#mobile-menu-toggle').click();
+        await page.getByRole('button', { name: 'Customize theme' }).click();
     }
 
     test.describe('Theme Switching', () => {
-        test('should have theme customizer button visible', async ({ page }) => {
-            await ensureThemeCustomizerVisible(page);
+        // Theme MODE (light/dark/system) is the vd3 VdThemeSwitcher (#theme-toggle-btn),
+        // which cycles system -> light -> dark and persists to vanduo-theme-preference.
+        test('should have a theme customizer control', async ({ page }) => {
+            const deskBtn = page.locator(
+                '.header-controls .header-icon-btn[aria-label="Open theme customizer"]',
+            );
+            const mobileToggle = page.locator('#mobile-menu-toggle');
+            expect(
+                (await deskBtn.isVisible()) || (await mobileToggle.isVisible()),
+            ).toBeTruthy();
         });
 
-        test('should open theme customizer when button clicked', async ({ page }) => {
-            await ensureThemeCustomizerVisible(page);
-            await page.click('[data-theme-customizer-trigger]');
-            // The Vanduo theme customizer uses a dynamic panel
-            const panel = page.locator('.vd-theme-customizer-panel');
-            await expect(panel).toHaveClass(/is-open/);
+        test('should open the theme customizer panel', async ({ page }) => {
+            await openThemeCustomizer(page);
+            await expect(page.locator('.vd-theme-customizer-panel')).toHaveClass(
+                /is-open/,
+            );
+            await expect(page.getByText('Customize Theme')).toBeVisible();
         });
 
-        test('should switch to Light theme via customizer', async ({ page }) => {
-            await page.evaluate(() => localStorage.setItem('kpc-theme', 'system'));
+        test('should cycle to Light theme', async ({ page }) => {
+            await page.evaluate(() =>
+                localStorage.setItem('vanduo-theme-preference', 'system'),
+            );
             await page.reload();
             await page.click('#theme-toggle-btn');
-            const html = page.locator('html');
-            await expect(html).toHaveAttribute('data-theme', 'light');
+            await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
         });
 
-        test('should switch to Dark theme via customizer', async ({ page }) => {
-            await page.evaluate(() => localStorage.setItem('kpc-theme', 'light'));
+        test('should cycle to Dark theme', async ({ page }) => {
+            await page.evaluate(() =>
+                localStorage.setItem('vanduo-theme-preference', 'light'),
+            );
             await page.reload();
             await page.click('#theme-toggle-btn');
-            const html = page.locator('html');
-            await expect(html).toHaveAttribute('data-theme', 'dark');
+            await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
         });
 
-        test('should switch to System theme via customizer', async ({ page }) => {
-            await page.evaluate(() => localStorage.setItem('kpc-theme', 'dark'));
+        test('should cycle to System theme', async ({ page }) => {
+            await page.evaluate(() =>
+                localStorage.setItem('vanduo-theme-preference', 'dark'),
+            );
             await page.reload();
             await page.click('#theme-toggle-btn');
-            const html = page.locator('html');
-            await expect(html).not.toHaveAttribute('data-theme');
+            await expect(page.locator('html')).not.toHaveAttribute('data-theme');
         });
     });
 

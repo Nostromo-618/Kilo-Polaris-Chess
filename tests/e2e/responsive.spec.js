@@ -73,11 +73,11 @@ test.describe('Responsive Layout', () => {
         test.use({ viewport: { width: 540, height: 960 } });
 
         test('should stack board and side panel vertically', async ({ page }) => {
-            const grid = page.locator('.vd-row');
+            const grid = page.locator('.app-layout');
             await expect(grid).toBeVisible();
 
             const boardSection = page.locator('.board-section');
-            const sidePanel = page.locator('aside');
+            const sidePanel = page.locator('.app-aside');
 
             await expect(boardSection).toBeVisible();
             await expect(sidePanel).toBeVisible();
@@ -86,7 +86,7 @@ test.describe('Responsive Layout', () => {
         test('should keep header elements horizontal', async ({ page }) => {
             const header = page.locator('.app-header');
             const computedStyle = await header.evaluate(el => {
-                const container = el.querySelector('.vd-container-lg');
+                const container = el.querySelector('.app-header-inner');
                 return container ? window.getComputedStyle(container).flexDirection : 'row';
             });
             expect(computedStyle).toBe('row');
@@ -137,7 +137,7 @@ test.describe('Responsive Layout', () => {
         test('controls should be accessible on mobile', async ({ page }) => {
             await expect(page.locator('#new-game-btn')).toBeVisible();
             await expect(page.locator('#difficulty-choice')).toBeVisible();
-            await expect(page.locator('[data-theme-customizer-trigger]')).toBeVisible();
+            await expect(page.locator('#mobile-menu-toggle')).toBeVisible();
         });
 
         test('game should be playable on mobile', async ({ page }) => {

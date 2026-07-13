@@ -54,9 +54,9 @@ export default defineConfig({
     },
   ],
 
-  /* Run local server before tests */
+  /* Serve the app via the Vite dev server (base "/" in dev). */
   webServer: {
-    command: 'node tests/server/static-server.mjs 3000',
+    command: 'pnpm exec vite --port 3000 --strictPort',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

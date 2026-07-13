@@ -1,0 +1,26 @@
+/* App-owned style entry.
+   - tokens-bridge.css : legacy app tokens (--board-*, --glass-*, ...) aliased onto vd3 --vd-*
+   - board.css         : the chess board island (kept 1:1 from the vanilla app)
+   - app.css           : refreshed chrome (header, side panel, modals) */
+@import "./tokens-bridge.css";
+@import "./board.css";
+@import "./app.css";
+
+:root {
+  color-scheme: light dark;
+}
+
+/* Reserve the vertical scrollbar's space at all times so the centered layout
+   doesn't nudge left/right when the move history grows tall enough to add a
+   page scrollbar (a subtle shift inherited from the old build). */
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--vd-bg-primary, #ffffff);
+  color: var(--vd-text-primary, #111827);
+  font-family: var(--vd-font-family-base, system-ui, sans-serif);
+}

@@ -10,8 +10,12 @@
  * This module does NOT implement chess rules; it is presentation-only.
  */
 
-/** Root-relative URL prefix for piece SVGs (served from repo root). */
-export const PIECE_IMAGE_BASE = "pieces/mpchess";
+/**
+ * URL prefix for piece SVGs. Under Vite the assets live in `public/pieces/` and
+ * are served at `<base>/pieces/`; `import.meta.env.BASE_URL` makes this correct
+ * for both dev (`/`) and a GitHub Pages sub-path build.
+ */
+export const PIECE_IMAGE_BASE = `${import.meta.env.BASE_URL}pieces/mpchess`;
 
 /**
  * @param {string} code - e.g. "wP", "bK"
