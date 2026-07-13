@@ -2,12 +2,10 @@ name: Deploy to GitHub Pages
 
 # Builds the Vite app and publishes it to GitHub Pages.
 #
-# NOTE: Requires @vanduo-oss/vd3 to be resolvable on the runner. While it is a
-# local `link:../../0_vanduo/vd3` dependency (pre-publish), `pnpm install` fails
-# on CI — flip the dependency to a published range before enabling this workflow
-# (see README "Building & deploying"). The default Vite `base` is
-# `/aurora-polaris-chess/` (a GitHub Pages project site); override with the
-# VITE_BASE env var for a user/organization site or a custom domain.
+# @vanduo-oss/vd3 is published on npm (pinned `^1.0.0`), so `pnpm install` resolves
+# it cleanly on the runner. The default Vite `base` is `/aurora-polaris-chess/`
+# (a GitHub Pages project site); override with the VITE_BASE env var for a
+# user/organization site or a custom domain.
 
 on:
   push:

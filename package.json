@@ -46,7 +46,7 @@
   },
   "homepage": "https://github.com/Nostromo-618/aurora-polaris-chess#readme",
   "dependencies": {
-    "@vanduo-oss/vd3": "link:../../0_vanduo/vd3",
+    "@vanduo-oss/vd3": "^1.0.0",
     "vue": "^3.5.39"
   },
   "devDependencies": {

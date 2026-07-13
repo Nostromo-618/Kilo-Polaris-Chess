@@ -6,11 +6,9 @@ on:
   pull_request:
     branches: [main]
 
-# NOTE: This app now consumes @vanduo-oss/vd3 (Vue 3 UI). Until vd3 is published
-# to npm it is a local `link:../../0_vanduo/vd3` dependency, which does NOT resolve
-# on a clean CI runner — `pnpm install` will fail until the dependency is flipped
-# to a published range (see README "Building & deploying"). The engine tests and
-# app are green locally in the meantime.
+# NOTE: This app consumes @vanduo-oss/vd3 (Vue 3 UI), published on npm and pinned
+# to a semver range (`^1.0.0`), so `pnpm install --frozen-lockfile` resolves it
+# cleanly on a CI runner from the committed lockfile.
 
 jobs:
   test:
