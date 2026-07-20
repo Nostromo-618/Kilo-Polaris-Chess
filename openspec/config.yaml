@@ -1,0 +1,42 @@
+schema: spec-driven
+
+context: |
+  Aurora Polaris Chess — a pure client-side chess game (Vue 3 + Vite, UI on
+  Vanduo vd3) that runs entirely in the browser for static hosting.
+
+  Two-layer architecture:
+    - js/ : framework-agnostic vanilla JS. js/engine/ is the dependency-free
+      chess engine (AI.js = search, Evaluator.js = static eval, Rules.js = move
+      generation, Board.js, Move.js, GameState.js, fen.js, uciMatch.js). The
+      "Aurora Polaris" engine runs in a Web Worker (js/ai.worker.js). A second,
+      vendored GPL engine (TomitankChess) runs as a UCI worker via
+      js/tomitankClient.js and is the strong default. js/engineAdapter.js is the
+      boundary over both.
+    - src/ : Vue 3 UI. src/composables/useGameStore.js is the singleton bridge.
+
+  Engine difficulty: levels 1-6. Levels 1-3 must stay CPU-light (browser game,
+  battery/fan friendly). Levels 4-6 may use real CPU within a per-move time
+  budget; level 6 is meant to be maximally strong.
+
+  Hard rule: never copy from or read vendor/tomitankChess.js for engine ideas —
+  it is another developer's GPL work. Engine improvements use only Aurora's own
+  code plus standard public chess-programming techniques.
+
+  Conventions: ES modules, no build-time TypeScript (JSDoc only), Playwright for
+  all tests (incl. "unit" specs run in-browser), conventional commit messages.
+
+rules:
+  proposal:
+    - Keep proposals focused; include a Non-goals section.
+  tasks:
+    - Group tasks by implementation phase; each task independently verifiable.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours

@@ -28,5 +28,11 @@ playwright/.cache/
 # Kilo Code
 .kilo/
 
+# Engine baseline snapshot (throwaway, for old-vs-new match measurement)
+.baseline/
+
+# Match harness result artifacts
+tests/matches/results/
+
 # VS Code
 .vscode/
