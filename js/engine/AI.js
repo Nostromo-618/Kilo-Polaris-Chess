@@ -1135,9 +1135,12 @@ export class AI {
       return 0;
     }
 
-    const staticEval = evaluate(state, rootColor);
+    // Static eval is only consumed by the level-6 shallow-depth RFP and futility
+    // pruning; compute it lazily so levels 4-5 don't pay for it at every node.
+    const needStaticEval = level >= 6 && !inCheck && depth <= 3;
+    const staticEval = needStaticEval ? evaluate(state, rootColor) : 0;
 
-    if (level >= 6 && !inCheck && depth <= 3 && allowNullMove) {
+    if (needStaticEval && allowNullMove) {
       const rfpMargin = RFP_MARGINS[depth] || 0;
       if (maximizing && staticEval - rfpMargin >= beta) return beta;
       if (!maximizing && staticEval + rfpMargin <= alpha) return alpha;
