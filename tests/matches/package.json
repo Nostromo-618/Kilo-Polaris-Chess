@@ -1,0 +1,6 @@
+{
+  "name": "aurora-match-harness",
+  "private": true,
+  "type": "module",
+  "description": "Headless engine-vs-engine measurement harness (see openspec engine-match-harness). ESM sandbox so the dependency-free js/engine modules can be imported directly in Node."
+}

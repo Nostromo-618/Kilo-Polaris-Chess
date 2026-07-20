@@ -1,8 +1,8 @@
 ## 1. Harness & baseline
 
-- [ ] 1.1 Snapshot the current engine as a baseline build for old-vs-new play
-- [ ] 1.2 Node self-play harness: two engine builds, fixed movetime, play to a terminal result with draw/adjudication, report W/L/D + score
-- [ ] 1.3 Playwright Aurora-vs-Tomitank harness via the existing UCI client (never read the vendored source)
+- [x] 1.1 Snapshot the current engine as a baseline build for old-vs-new play
+- [x] 1.2 Node self-play harness: two engine builds, fixed movetime, play to a terminal result with draw/adjudication, report W/L/D + score
+- [x] 1.3 Playwright Aurora-vs-Tomitank harness via the existing UCI client (never read the vendored source)
 - [ ] 1.4 Run BEFORE matches: baseline Aurora vs Tomitank (levels 4/5/6) as the yardstick
 
 ## 2. Phase 1 — evaluation correctness
