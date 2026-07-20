@@ -77,6 +77,25 @@ export class Game {
   }
 
   /**
+   * Per-move time budget (ms) for human play, by difficulty. Levels 1-3 finish
+   * at their tiny fixed depth well within any budget (kept snappy/CPU-light);
+   * levels 4-6 deepen to fill their budget. Engine-vs-engine matches override
+   * this with an explicit per-move time.
+   * @returns {number}
+   */
+  moveTimeForDifficulty() {
+    switch (this.difficulty) {
+      case 1: return 400;
+      case 2: return 700;
+      case 3: return 1200;
+      case 4: return 1500;
+      case 5: return 4000;
+      case 6: return this.aiMoveTimeMs;
+      default: return this.aiMoveTimeMs;
+    }
+  }
+
+  /**
    * Get underlying board representation for UI.
    * @returns {Record<string,string|null>}
    */
@@ -263,7 +282,7 @@ export class Game {
   async computeAIMove({ signal, onInfo, movetime } = {}) {
     if (this.isGameOver()) return null;
     const aiColor = this.getCurrentTurn();
-    const timeout = movetime || this.aiMoveTimeMs;
+    const timeout = movetime || this.moveTimeForDifficulty();
     const auroraOpts = {
       difficulty: this.difficulty,
       movetime: timeout,

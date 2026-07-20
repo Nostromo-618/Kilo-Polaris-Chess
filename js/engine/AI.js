@@ -637,18 +637,24 @@ export class AI {
       6: 0.0,
     };
 
+    // Depth caps. Levels 1-3 stay shallow and fixed (CPU-light). Levels 4-6 get
+    // caps high enough that the per-move TIME budget is the binding constraint
+    // (see Game.moveTimeForDifficulty), so they deepen to fill their budget
+    // instead of stopping early at a fixed depth. Simple positions still return
+    // as soon as the cap is reached.
     this.depthForLevel = {
       1: 1,
       2: 2,
       3: 3,
-      4: 4,
-      5: 5,
-      6: 7,
+      4: 8,
+      5: 12,
+      6: 22,
     };
 
-    // Killer moves: 2 slots per depth level (up to depth 20)
+    // Killer moves: 2 slots per remaining-depth level (sized for the deepest cap
+    // plus check extensions).
     this.killerMoves = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 64; i++) {
       this.killerMoves.push([null, null]);
     }
 
@@ -964,8 +970,13 @@ export class AI {
     // blunder. These levels are shallow, so the lost pruning is negligible.
     const jitter = this.randomness[level] || 0;
     if (jitter > 0) {
+      // Only the best-ordered candidates need exact scores (the true best is
+      // almost always among them given TT/MVV-LVA/killer ordering). Capping the
+      // count keeps these casual levels CPU-light despite the full window.
+      const JITTER_CANDIDATES = 12;
+      const pool = ordered.slice(0, JITTER_CANDIDATES);
       const scored = [];
-      for (const move of ordered) {
+      for (const move of pool) {
         if (timedOut()) break;
         state.makeMove(move);
         const s = this.minimax(state, depth - 1, -1000000, 1000000, color, !isMaximizing, level, timeout, startTime, true, 1);
@@ -1359,6 +1370,9 @@ export class AI {
 
       if (this.lastSearchInfo.timedOut) break;
 
+      // Keep deepening: a complex position runs until the time budget is hit
+      // (the last completed depth is retained on timeout), while a simple
+      // position stops promptly once it reaches the depth cap.
       await Promise.resolve();
     }
 

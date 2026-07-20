@@ -388,10 +388,12 @@ test.describe('AI - Search Algorithms', () => {
             };
         });
 
+        // Levels 1-3 keep their fixed shallow caps (CPU-light). Levels 4-6 have
+        // high caps so the per-move time budget binds instead (time-managed).
         expect(result.level1Depth).toBe(1);
         expect(result.level3Depth).toBe(3);
-        expect(result.level5Depth).toBe(5);
-        expect(result.level6Depth).toBe(7);
+        expect(result.level5Depth).toBeGreaterThanOrEqual(5);
+        expect(result.level6Depth).toBeGreaterThanOrEqual(7);
     });
 
     test('should handle timeout during search', async ({ page }) => {
