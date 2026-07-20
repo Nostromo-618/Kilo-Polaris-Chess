@@ -22,7 +22,7 @@ const ai = new AI();
  * Handle incoming messages from main thread
  */
 self.onmessage = async function (event) {
-  const { type, state, level, forColor, timeout } = event.data;
+  const { type, state, level, forColor, timeout, history } = event.data;
 
   if (type !== "search") {
     self.postMessage({ type: "error", message: `Unknown message type: ${type}` });
@@ -65,6 +65,7 @@ self.onmessage = async function (event) {
       level: level,
       forColor: forColor,
       timeout: timeout || 10000,
+      history: Array.isArray(history) ? history : [],
       onInfo: (info) => self.postMessage({ type: "info", info }),
     });
 

@@ -861,13 +861,16 @@ test.describe('Evaluator - Mobility', () => {
                 fullmoveNumber: 1
             };
 
-            const developedScore = evaluate(developed, 'white');
-            const undevelopedScore = evaluate(undeveloped, 'white');
+            // In `developed`, BLACK is the side with pieces off the back rank,
+            // so measure the benefit from black's perspective (the side that
+            // developed). Evaluating white here would correctly show white worse.
+            const developedScore = evaluate(developed, 'black');
+            const undevelopedScore = evaluate(undeveloped, 'black');
 
             return { developedScore, undevelopedScore };
         });
 
-        // Developed position should have better mobility
+        // Developing pieces should improve the developed side's evaluation.
         expect(result.developedScore).toBeGreaterThanOrEqual(result.undevelopedScore);
     });
 });

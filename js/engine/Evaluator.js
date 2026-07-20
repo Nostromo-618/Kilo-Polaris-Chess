@@ -84,14 +84,15 @@ const PHASE_WEIGHTS = {
  * Indexed 0..63 with a1=0. Mirror for black.
  * ============================================================ */
 
+// Indexed a1=0..h8=63 (rank 1 first). White reads directly; black mirrors ranks.
 const PST_PAWN_MG = [
    0,  0,  0,  0,  0,  0,  0,  0,
-  40, 50, 50, 60, 60, 50, 50, 40,
-  10, 10, 20, 35, 35, 20, 10, 10,
-   5,  5, 10, 25, 25, 10,  5,  5,
-   0,  0,  5, 20, 20,  5,  0,  0,
-   5, -5,-10,  0,  0,-10, -5,  5,
    5, 10, 10,-20,-20, 10, 10,  5,
+   5, -5,-10,  0,  0,-10, -5,  5,
+   0,  0,  5, 20, 20,  5,  0,  0,
+   5,  5, 10, 25, 25, 10,  5,  5,
+  10, 10, 20, 35, 35, 20, 10, 10,
+  40, 50, 50, 60, 60, 50, 50, 40,
    0,  0,  0,  0,  0,  0,  0,  0,
 ];
 
@@ -140,14 +141,14 @@ const PST_QUEEN_MG = [
 ];
 
 const PST_KING_MG = [
- -30,-40,-40,-50,-50,-40,-40,-30,
- -30,-40,-40,-50,-50,-40,-40,-30,
- -30,-40,-40,-50,-50,-40,-40,-30,
- -30,-40,-40,-50,-50,-40,-40,-30,
- -20,-30,-30,-40,-40,-30,-30,-20,
- -10,-20,-20,-20,-20,-20,-20,-10,
-  20, 20,  0,  0,  0,  0, 20, 20,
   20, 30, 10,  0,  0, 10, 30, 20,
+  20, 20,  0,  0,  0,  0, 20, 20,
+ -10,-20,-20,-20,-20,-20,-20,-10,
+ -20,-30,-30,-40,-40,-30,-30,-20,
+ -30,-40,-40,-50,-50,-40,-40,-30,
+ -30,-40,-40,-50,-50,-40,-40,-30,
+ -30,-40,-40,-50,-50,-40,-40,-30,
+ -30,-40,-40,-50,-50,-40,-40,-30,
 ];
 
 /* ============================================================
@@ -157,12 +158,12 @@ const PST_KING_MG = [
 
 const PST_PAWN_EG = [
    0,  0,  0,  0,  0,  0,  0,  0,
-  70, 70, 70, 70, 70, 70, 70, 70,
-  40, 40, 40, 45, 45, 40, 40, 40,
-  20, 20, 25, 30, 30, 25, 20, 20,
-  10, 10, 15, 25, 25, 15, 10, 10,
-   5,  5,  5, 10, 10,  5,  5,  5,
    0,  0,  0,  0,  0,  0,  0,  0,
+   5,  5,  5, 10, 10,  5,  5,  5,
+  10, 10, 15, 25, 25, 15, 10, 10,
+  20, 20, 25, 30, 30, 25, 20, 20,
+  40, 40, 40, 45, 45, 40, 40, 40,
+  70, 70, 70, 70, 70, 70, 70, 70,
    0,  0,  0,  0,  0,  0,  0,  0,
 ];
 
@@ -458,7 +459,9 @@ function evaluatePawnStructure(pawnPositions, ownPawnFiles, enemyPawnFiles, enem
 
     // Passed pawn bonus (tapered)
     if (isPassedPawn(file, rank, pawnColor, enemyPawnPositions)) {
-      const advancementRank = pawnColor === "white" ? 7 - rank : rank;
+      // Index by true advancement toward promotion (a1=0 indexing: white
+      // advances as rank increases, black as rank decreases).
+      const advancementRank = pawnColor === "white" ? rank : 7 - rank;
       const mgBonus = PASSED_PAWN_BONUS_MG[advancementRank];
       const egBonus = PASSED_PAWN_BONUS_EG[advancementRank];
       bonus += lerp(egBonus, mgBonus, phase);
@@ -540,9 +543,13 @@ function evaluateRookActivity(board, rookIndexes, enemyKingIndex, enemyPawns, ro
   for (const rookIndex of rookIndexes) {
     const rank = Math.floor(rookIndex / 8);
     if (rank === seventhRank) {
-      const enemyBackRank = rookColor === "white" ? 6 : 1;
-      const hasTargets = enemyPawns.some((p) => p.rank === enemyBackRank) ||
-        (enemyKingIndex >= 0 && Math.floor(enemyKingIndex / 8) === enemyBackRank);
+      // Enemy pawns sit on the rook's 7th rank (6 for white, 1 for black);
+      // a confined enemy king sits on its OWN back rank (7 for white's target,
+      // 0 for black's target) — these are different ranks.
+      const pawnTargetRank = rookColor === "white" ? 6 : 1;
+      const kingConfinedRank = rookColor === "white" ? 7 : 0;
+      const hasTargets = enemyPawns.some((p) => p.rank === pawnTargetRank) ||
+        (enemyKingIndex >= 0 && Math.floor(enemyKingIndex / 8) === kingConfinedRank);
       if (hasTargets) bonus += ROOK_SEVENTH_RANK_BONUS;
     }
 
@@ -719,7 +726,12 @@ function rayAttacked(board, file, rank, dirs, attackers) {
     let r = rank + dr;
     while (f >= 0 && f <= 7 && r >= 0 && r <= 7) {
       const piece = board[r * 8 + f];
-      if (piece) return attackers.includes(piece);
+      if (piece) {
+        // A blocker in this direction only blocks this ray; keep scanning the
+        // other directions instead of returning for the whole function.
+        if (attackers.includes(piece)) return true;
+        break;
+      }
       f += df;
       r += dr;
     }

@@ -250,7 +250,8 @@ function createGameStore() {
 
     try {
       game = Game.fromSaved(savedState, {
-        difficulty: savedDifficulty || 6,
+        // Align with the UI default (3); `?? ` so a saved level 0 isn't ignored.
+        difficulty: savedDifficulty ?? 3,
         engine,
         onUpdate: syncUIWithGame,
       });
@@ -562,9 +563,11 @@ function createGameStore() {
           signal: matchAbortController?.signal,
           forColor: color,
           onInfo: (info) => {
-            if (info?.depth) {
+            // Tomitank reports `depth`; Aurora reports `depthCompleted`.
+            const depth = info?.depth ?? info?.depthCompleted;
+            if (depth) {
               updateMatchStatus(
-                `${formatMatchSideLabel(color, engineId, sideConfig.difficulty)} search depth ${info.depth}`,
+                `${formatMatchSideLabel(color, engineId, sideConfig.difficulty)} search depth ${depth}`,
               );
             }
           },

@@ -74,6 +74,7 @@ export class GameState {
     state.result = null;
     state.lastMove = null;
     state.repetitionMap = new Map();
+    state.reversibleHistory = [];
     state.recordRepetitionKey();
     state.updateStatusText();
     return state;
@@ -106,6 +107,8 @@ export class GameState {
 
       this.selectedSquare = null;
       this.cachedLegalTargets = [];
+      // Positions since the last irreversible move (for repetition-aware search).
+      this.reversibleHistory = [];
     } else {
       this.board = new Array(64).fill(null);
       this.activeColor = "white";
@@ -123,6 +126,8 @@ export class GameState {
       this.repetitionMap = new Map();
       this.selectedSquare = null;
       this.cachedLegalTargets = [];
+      // Positions since the last irreversible move (for repetition-aware search).
+      this.reversibleHistory = [];
     }
   }
 
@@ -262,6 +267,8 @@ export class GameState {
       // If clicked another own piece, re-select handled above; reaching here means invalid -> clear selection.
       this.selectedSquare = null;
       this.cachedLegalTargets = [];
+      // Positions since the last irreversible move (for repetition-aware search).
+      this.reversibleHistory = [];
       return {
         moved: false,
         selectedSquare: null,
@@ -284,6 +291,17 @@ export class GameState {
    */
   applyMove(move) {
     if (this.isGameOver()) return;
+
+    // Snapshot the position BEFORE this move so a later revisit is a repetition.
+    const preSnapshot = {
+      board: this.board.slice(),
+      activeColor: this.activeColor,
+      castlingRights: {
+        white: { ...this.castlingRights.white },
+        black: { ...this.castlingRights.black },
+      },
+      enPassantTarget: this.enPassantTarget,
+    };
 
     const fromIndex = algebraicToIndex(move.from);
     const toIndex = algebraicToIndex(move.to);
@@ -370,9 +388,26 @@ export class GameState {
     // Repetition tracking
     this.recordRepetitionKey();
 
+    // Maintain the reversible-move window: an irreversible move (pawn move or
+    // capture) resets it because earlier positions can never recur.
+    if (isPawn || isCapture) {
+      this.reversibleHistory = [];
+    } else {
+      this.reversibleHistory.push(preSnapshot);
+    }
+
     // Determine game result
     this.updateResult();
     this.updateStatusText();
+  }
+
+  /**
+   * Positions since the last irreversible move (excluding the current one), for
+   * repetition-aware engine search. Each is { board, activeColor,
+   * castlingRights, enPassantTarget }.
+   */
+  getReversibleHistory() {
+    return this.reversibleHistory;
   }
 
   /**

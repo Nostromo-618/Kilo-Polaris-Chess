@@ -1,2 +1,3 @@
-tests/matches/engines/
+engines/
 results/
+.probe/

@@ -14,6 +14,8 @@ export const ENGINE_IDS = {
 let auroraWorker = null;
 let auroraWorkerReady = false;
 let auroraPending = null;
+let auroraReadyPromise = null;
+let auroraReadyResolve = null;
 
 function toSearchState(gameState) {
   return {
@@ -29,12 +31,15 @@ function toSearchState(gameState) {
 function initAuroraWorker() {
   if (auroraWorker) return;
 
+  auroraReadyPromise = new Promise((resolve) => { auroraReadyResolve = resolve; });
+
   try {
     auroraWorker = new Worker(new URL("./ai.worker.js", import.meta.url), { type: "module" });
     auroraWorker.onmessage = (event) => {
       const { type, move, message, info } = event.data || {};
       if (type === "ready") {
         auroraWorkerReady = true;
+        auroraReadyResolve?.();
         return;
       }
       if (type === "info" && auroraPending) {
@@ -87,12 +92,24 @@ class AuroraAdapter {
     if (this.useWorker) initAuroraWorker();
   }
 
-  async findBestMove(gameState, { difficulty = 6, movetime = 10000, signal, onInfo, forColor } = {}) {
+  async findBestMove(gameState, { difficulty = 6, movetime = 10000, signal, onInfo, forColor, history } = {}) {
     if (signal?.aborted) return null;
 
     const state = toSearchState(gameState);
     const color = forColor || state.activeColor;
     const timeout = Math.max(50, Number(movetime) || 10000);
+
+    // Wait briefly for the worker to finish loading rather than running the very
+    // first (often heaviest) search synchronously on the main thread.
+    if (this.useWorker) {
+      if (!auroraWorker) initAuroraWorker();
+      if (!auroraWorkerReady && auroraReadyPromise) {
+        await Promise.race([
+          auroraReadyPromise,
+          new Promise((r) => setTimeout(r, 1500)),
+        ]);
+      }
+    }
 
     if (this.useWorker && auroraWorker && auroraWorkerReady && !auroraPending) {
       return new Promise((resolve, reject) => {
@@ -120,6 +137,7 @@ class AuroraAdapter {
           level: difficulty,
           forColor: color,
           timeout,
+          history,
         });
       });
     }
@@ -130,6 +148,7 @@ class AuroraAdapter {
       timeout,
       signal,
       onInfo,
+      history,
     });
     return signal?.aborted ? null : move;
   }

@@ -270,6 +270,9 @@ export class Game {
       signal,
       onInfo,
       forColor: aiColor,
+      // Positions since the last irreversible move, so the search can detect a
+      // repetition draw across played moves (not just within its own tree).
+      history: this.state.getReversibleHistory(),
     };
 
     if (this.engine === "tomitank") {
