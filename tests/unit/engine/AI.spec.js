@@ -435,14 +435,18 @@ test.describe('AI - Difficulty Levels', () => {
             return {
                 level1Randomness: ai.randomness[1],
                 level3Randomness: ai.randomness[3],
+                level4Randomness: ai.randomness[4],
                 level5Randomness: ai.randomness[5],
                 level6Randomness: ai.randomness[6],
             };
         });
 
-        expect(result.level1Randomness).toBe(0.35);
-        expect(result.level3Randomness).toBe(0.10);
-        expect(result.level5Randomness).toBe(0.03);
+        // Variety jitter is kept only at the casual low levels; levels 4-6 play
+        // their best move (no jitter) so they are as strong as the search allows.
+        expect(result.level1Randomness).toBeGreaterThan(result.level3Randomness);
+        expect(result.level3Randomness).toBeGreaterThan(0);
+        expect(result.level4Randomness).toBe(0);
+        expect(result.level5Randomness).toBe(0);
         expect(result.level6Randomness).toBe(0);
     });
 

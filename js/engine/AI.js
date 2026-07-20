@@ -626,12 +626,14 @@ export class AI {
   static NULL_MOVE_REDUCTION = 3;
 
   constructor() {
+    // Variety jitter, kept only at the casual low levels. Levels 4-6 play their
+    // best move (no jitter) so they are as strong as the search allows.
     this.randomness = {
       1: 0.35,
       2: 0.20,
       3: 0.10,
-      4: 0.05,
-      5: 0.03,
+      4: 0.0,
+      5: 0.0,
       6: 0.0,
     };
 
@@ -955,6 +957,33 @@ export class AI {
     if (ordered.length === 0) return null;
 
     const timedOut = () => timeout && startTime && Date.now() - startTime >= timeout;
+
+    // Low levels with variety: score every root move with a FULL window so the
+    // jitter compares exact scores. Alpha-beta only proves bounds for non-best
+    // moves, so jittering over those could pick a move that is actually a
+    // blunder. These levels are shallow, so the lost pruning is negligible.
+    const jitter = this.randomness[level] || 0;
+    if (jitter > 0) {
+      const scored = [];
+      for (const move of ordered) {
+        if (timedOut()) break;
+        state.makeMove(move);
+        const s = this.minimax(state, depth - 1, -1000000, 1000000, color, !isMaximizing, level, timeout, startTime, true, 1);
+        state.undoMove();
+        if (s === null) break;
+        scored.push({ move, score: s });
+      }
+      if (scored.length === 0) { this.lastRootScore = undefined; return ordered[0]; }
+      scored.sort((x, y) => (isMaximizing ? y.score - x.score : x.score - y.score));
+      const best = scored[0].score;
+      this.lastRootScore = Number.isFinite(best) ? best : undefined;
+      this.lastSearchInfo.bestScore = this.lastRootScore ?? null;
+      if (ttKey) this.storeTable(ttKey, depth, best, TT_EXACT, scored[0].move, 0);
+      const threshold = PIECE_VALUES.P * jitter * 2;
+      const cands = scored.filter((x) => Math.abs(x.score - best) <= threshold).map((x) => x.move);
+      return cands[Math.floor(Math.random() * cands.length)] || scored[0].move;
+    }
+
     const ASPIRATION_WINDOW = level >= 6 ? 25 : 50;
 
     let alpha = -1000000, beta = 1000000;
@@ -964,7 +993,7 @@ export class AI {
     }
     const widenings = level >= 6 ? [50, 100, 200, Infinity] : [Infinity];
 
-    let finalBestMove = null, finalBestScore = null, finalScores = null;
+    let finalBestMove = null, finalBestScore = null;
 
     for (let attempt = 0; ; attempt++) {
       // Each aspiration attempt starts fresh so a bound score from a failed
@@ -972,7 +1001,6 @@ export class AI {
       let bestMove = null, bestScore = isMaximizing ? -Infinity : Infinity;
       let a = alpha, b = beta;
       let completedAny = false, failed = false;
-      const scores = [];
 
       for (const move of ordered) {
         if (timedOut()) { this.lastSearchInfo.timedOut = true; break; }
@@ -981,7 +1009,6 @@ export class AI {
         state.undoMove();
         if (score === null) { this.lastSearchInfo.timedOut = true; break; }
         completedAny = true;
-        scores.push({ move, score });
         if (isMaximizing) {
           if (score > bestScore) { bestScore = score; bestMove = move; }
           if (score > a) a = score;
@@ -1000,7 +1027,7 @@ export class AI {
       }
 
       if (completedAny && !failed) {
-        finalBestMove = bestMove; finalBestScore = bestScore; finalScores = scores;
+        finalBestMove = bestMove; finalBestScore = bestScore;
         break;
       }
       if (!completedAny) break; // aborted before any root move finished this depth
@@ -1022,19 +1049,6 @@ export class AI {
 
     // Store the completed root result so the next iteration orders from it.
     if (ttKey) this.storeTable(ttKey, depth, finalBestScore, TT_EXACT, finalBestMove, 0);
-
-    // Variety at lower levels: jitter only among moves whose actual SEARCH
-    // score is within the threshold of the best (never a static-eval guess).
-    const jitter = this.randomness[level] || 0;
-    if (jitter > 0 && finalScores.length > 1) {
-      const threshold = PIECE_VALUES.P * jitter * 2;
-      const candidates = finalScores
-        .filter((s) => Math.abs(s.score - finalBestScore) <= threshold)
-        .map((s) => s.move);
-      if (candidates.length > 0) {
-        return candidates[Math.floor(Math.random() * candidates.length)];
-      }
-    }
 
     return finalBestMove;
   }
@@ -1065,11 +1079,18 @@ export class AI {
     const originalAlpha = alpha;
     const originalBeta = beta;
 
-    // Draw detection (never at the root): fifty-move rule and repetition, so the
-    // engine won't shuffle a won position into a draw or misjudge a drawn one.
+    // Draw detection (never at the root): repetition and the fifty-move rule, so
+    // the engine won't shuffle a won position into a draw or misjudge a drawn one.
     if (ply > 0) {
-      if (state.halfmoveClock >= 100) return 0;
+      // A repeated position can never be checkmate (the earlier occurrence would
+      // have ended the game), so this is always a safe draw.
       if (this.isDrawByRepetition(state)) return 0;
+      // Checkmate takes precedence over the fifty-move rule: only score the
+      // fifty-move draw when the side to move is not being mated right now.
+      if (state.halfmoveClock >= 100 &&
+          !(isInCheck(state) && generateLegalMoves(state).length === 0)) {
+        return 0;
+      }
     }
 
     const inCheck = isInCheck(state);

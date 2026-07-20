@@ -108,7 +108,7 @@ export class GameState {
       this.selectedSquare = null;
       this.cachedLegalTargets = [];
       // Positions since the last irreversible move (for repetition-aware search).
-      this.reversibleHistory = [];
+      this.reversibleHistory = Array.isArray(data.reversibleHistory) ? data.reversibleHistory : [];
     } else {
       this.board = new Array(64).fill(null);
       this.activeColor = "white";
@@ -146,7 +146,8 @@ export class GameState {
       moveHistory: this.moveHistory,
       result: this.result,
       lastMove: this.lastMove,
-      repetitionMap: Array.from(this.repetitionMap.entries())
+      repetitionMap: Array.from(this.repetitionMap.entries()),
+      reversibleHistory: this.reversibleHistory,
     };
   }
 
@@ -267,8 +268,6 @@ export class GameState {
       // If clicked another own piece, re-select handled above; reaching here means invalid -> clear selection.
       this.selectedSquare = null;
       this.cachedLegalTargets = [];
-      // Positions since the last irreversible move (for repetition-aware search).
-      this.reversibleHistory = [];
       return {
         moved: false,
         selectedSquare: null,
