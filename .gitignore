@@ -40,3 +40,4 @@ tests/matches/results/
 # Engine phase snapshots (throwaway, for phase-vs-phase comparison)
 .phase1/
 .prepvs/
+.nosee/
