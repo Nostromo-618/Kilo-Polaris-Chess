@@ -151,13 +151,15 @@ export function generateLegalMoves(state) {
 
 /**
  * Generate legal "noisy" moves only — captures, promotions, and en passant —
- * for quiescence search. Much cheaper than generateLegalMoves + filter because
- * the legality check runs only on the handful of noisy moves, not every quiet.
+ * for quiescence search. Uses a dedicated noisy pseudo-move generator (no
+ * quiet moves are ever allocated); the legality check then runs only on that
+ * handful of moves. Produces the same moves, in the same order, as filtering
+ * generatePseudoLegalMoves down to noisy moves.
  * @param {Object} state
  * @returns {Move[]}
  */
 export function generateCaptureMoves(state) {
-  const pseudoMoves = generatePseudoLegalMoves(state);
+  const pseudoMoves = generateNoisyPseudoMoves(state);
   const legal = [];
 
   const board = state.board;
@@ -170,13 +172,153 @@ export function generateCaptureMoves(state) {
   }
 
   for (const move of pseudoMoves) {
-    if (!(move.captured || move.promotion || move.isEnPassant)) continue;
     if (!moveLeavesKingInCheck(board, move, moverColor, enemy, kingIndex)) {
       legal.push(move);
     }
   }
 
   return legal;
+}
+
+/**
+ * Generate pseudo-legal noisy moves (captures, promotions, en passant) without
+ * allocating quiet moves. Not filtered for leaving the king in check.
+ */
+function generateNoisyPseudoMoves(state) {
+  const moves = [];
+  const { board, activeColor, enPassantTarget } = state;
+  const enemy = oppositeColor(activeColor);
+
+  const epIndex =
+    enPassantTarget != null ? algebraicToIndex(enPassantTarget) : -1;
+
+  for (let fromIndex = 0; fromIndex < 64; fromIndex += 1) {
+    const piece = board[fromIndex];
+    if (!piece) continue;
+    const color = getColorOf(piece);
+    if (color !== activeColor) continue;
+
+    const fromSq = indexToAlgebraic(fromIndex);
+    const { file, rank } = indexToFR(fromIndex);
+
+    switch (piece[1]) {
+      case "P": {
+        const dir = color === "white" ? 1 : -1;
+        const promotionRank = color === "white" ? 6 : 1;
+        const lastRank = color === "white" ? 7 : 0;
+        const oneStepRank = rank + dir;
+        // Promotion by advance (promotions are noisy even without a capture).
+        if (rank === promotionRank && oneStepRank >= 0 && oneStepRank <= 7) {
+          const oneStepIndex = oneStepRank * 8 + file;
+          if (!board[oneStepIndex]) {
+            addPawnAdvance(fromSq, fromIndex, oneStepIndex, color, promotionRank, lastRank, moves);
+          }
+        }
+        // Captures (including promotion captures) and en passant.
+        const captureFiles = [file - 1, file + 1];
+        for (const cf of captureFiles) {
+          if (cf < 0 || cf > 7) continue;
+          const targetRank = rank + dir;
+          if (targetRank < 0 || targetRank > 7) continue;
+          const targetIndex = targetRank * 8 + cf;
+          const targetPiece = board[targetIndex];
+          if (targetPiece && getColorOf(targetPiece) === enemy) {
+            addPawnCapture(fromSq, fromIndex, targetIndex, color, targetPiece, promotionRank, lastRank, moves);
+          }
+          if (epIndex === targetIndex && !targetPiece) {
+            const epPawnIndex = rank * 8 + cf;
+            const captured = board[epPawnIndex];
+            if (captured && getColorOf(captured) === enemy) {
+              moves.push(
+                createEnPassantMove(fromSq, indexToAlgebraic(targetIndex), board[fromIndex], captured)
+              );
+            }
+          }
+        }
+        break;
+      }
+      case "N":
+        generateKnightCaptures(board, fromIndex, fromSq, color, moves);
+        break;
+      case "B":
+        generateSlidingCaptures(board, fromIndex, fromSq, color, moves, [
+          [1, 1], [1, -1], [-1, 1], [-1, -1],
+        ]);
+        break;
+      case "R":
+        generateSlidingCaptures(board, fromIndex, fromSq, color, moves, [
+          [1, 0], [-1, 0], [0, 1], [0, -1],
+        ]);
+        break;
+      case "Q":
+        generateSlidingCaptures(board, fromIndex, fromSq, color, moves, [
+          [1, 0], [-1, 0], [0, 1], [0, -1],
+          [1, 1], [1, -1], [-1, 1], [-1, -1],
+        ]);
+        break;
+      case "K":
+        generateKingCaptures(board, fromIndex, fromSq, color, moves);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return moves;
+}
+
+function generateKnightCaptures(board, fromIndex, fromSq, color, moves) {
+  const { file, rank } = indexToFR(fromIndex);
+  const jumps = [
+    [1, 2], [2, 1], [2, -1], [1, -2],
+    [-1, -2], [-2, -1], [-2, 1], [-1, 2],
+  ];
+  for (const [df, dr] of jumps) {
+    const nf = file + df;
+    const nr = rank + dr;
+    if (nf < 0 || nf > 7 || nr < 0 || nr > 7) continue;
+    const toIndex = nr * 8 + nf;
+    const target = board[toIndex];
+    if (target && getColorOf(target) !== color) {
+      moves.push(createMove(fromSq, indexToAlgebraic(toIndex), board[fromIndex], target));
+    }
+  }
+}
+
+function generateSlidingCaptures(board, fromIndex, fromSq, color, moves, dirs) {
+  for (const [df, dr] of dirs) {
+    let { file, rank } = indexToFR(fromIndex);
+    while (true) {
+      file += df;
+      rank += dr;
+      if (file < 0 || file > 7 || rank < 0 || rank > 7) break;
+      const toIndex = rank * 8 + file;
+      const target = board[toIndex];
+      if (target) {
+        if (getColorOf(target) !== color) {
+          moves.push(createMove(fromSq, indexToAlgebraic(toIndex), board[fromIndex], target));
+        }
+        break;
+      }
+    }
+  }
+}
+
+function generateKingCaptures(board, fromIndex, fromSq, color, moves) {
+  const { file, rank } = indexToFR(fromIndex);
+  for (let df = -1; df <= 1; df += 1) {
+    for (let dr = -1; dr <= 1; dr += 1) {
+      if (df === 0 && dr === 0) continue;
+      const nf = file + df;
+      const nr = rank + dr;
+      if (nf < 0 || nf > 7 || nr < 0 || nr > 7) continue;
+      const toIndex = nr * 8 + nf;
+      const target = board[toIndex];
+      if (target && getColorOf(target) !== color) {
+        moves.push(createMove(fromSq, indexToAlgebraic(toIndex), board[fromIndex], target));
+      }
+    }
+  }
 }
 
 /**

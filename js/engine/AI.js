@@ -743,6 +743,10 @@ const TT_MAX_SIZE_DEFAULT = 100000;
 /** Larger transposition table for Level 6 */
 const TT_MAX_SIZE_L6 = 500000;
 
+/** Evaluation cache size (entries) and BigInt mask for indexing. */
+const EVAL_CACHE_SIZE = 1 << 16;
+const EVAL_CACHE_MASK = 65535n;
+
 /** Null move reduction depth */
 const NULL_MOVE_REDUCTION = 3;
 
@@ -801,9 +805,21 @@ export class AI {
       this.historyTable.push(new Array(64).fill(0));
     }
 
+    // Countermove heuristic: [pieceIndex][toSquare of previous move] -> quiet
+    // move that refuted it (standard public technique). Search-local, level >= 4.
+    this.counterMoves = [];
+    for (let i = 0; i < 12; i++) {
+      this.counterMoves.push(new Array(64).fill(null));
+    }
+
     // Transposition table - default size, resized for Level 6
     this.ttSize = TT_MAX_SIZE_DEFAULT;
     this.transpositionTable = new Array(TT_MAX_SIZE_DEFAULT);
+
+    // Evaluation cache (levels 4-6): Zobrist-keyed memo for the full static
+    // eval. Eval is a pure function of the position, so cached scores are
+    // identical to recomputation — this only saves time. Kept across moves.
+    this.evalCache = new Array(EVAL_CACHE_SIZE);
 
     this.lastSearchInfo = this.createSearchInfo();
     this.lastRootScore = undefined;
@@ -824,6 +840,20 @@ export class AI {
   resetSearchInfo() {
     this.lastSearchInfo = this.createSearchInfo();
     this.lastRootScore = undefined;
+    this.timeCheckCtr = 0;
+  }
+
+  /**
+   * Throttled wall-clock check. Date.now() at every node measurably costs NPS,
+   * so the clock is only sampled once per 256 calls (~2-3ms overshoot at most,
+   * which the fixed per-move budget tolerates). Call sites remain responsible
+   * for setting lastSearchInfo.timedOut when this returns true.
+   */
+  isTimeUp(timeout, startTime) {
+    if (!timeout || !startTime) return false;
+    this.timeCheckCtr = (this.timeCheckCtr + 1) & 255;
+    if (this.timeCheckCtr !== 0) return false;
+    return Date.now() - startTime >= timeout;
   }
 
   getLastSearchInfo() {
@@ -843,6 +873,9 @@ export class AI {
     for (let i = 0; i < this.killerMoves.length; i++) {
       this.killerMoves[i][0] = null;
       this.killerMoves[i][1] = null;
+    }
+    for (let i = 0; i < 12; i++) {
+      this.counterMoves[i].fill(null);
     }
     for (let i = 0; i < 64; i++) {
       for (let j = 0; j < 64; j++) {
@@ -878,6 +911,19 @@ export class AI {
     return this.historyTable[fromIdx][toIdx];
   }
 
+  /**
+   * Memoized full static evaluation (levels 4-6 hot paths only). Identical
+   * score to evaluate(); always-replace on index collision.
+   */
+  evalCached(state, rootColor) {
+    const idx = Number(state.hash & EVAL_CACHE_MASK);
+    const hit = this.evalCache[idx];
+    if (hit && hit.key === state.hash) return hit.score;
+    const score = evaluate(state, rootColor);
+    this.evalCache[idx] = { key: state.hash, score };
+    return score;
+  }
+
   countPieces(board) {
     let count = 0;
     for (let i = 0; i < 64; i++) {
@@ -906,18 +952,48 @@ export class AI {
   }
 
   /**
-   * Score a single move for ordering (TT move, then MVV-LVA captures, killers,
-   * history), matching the priorities alpha-beta relies on.
+   * Remember `move` as the refutation of the opponent's previous move
+   * (countermove heuristic). Quiet moves only.
    */
-  scoreMoveForOrdering(move, depth, ttBestMove) {
+  storeCounterMove(prevMove, move) {
+    if (!prevMove || move.captured || move.promotion) return;
+    const pi = PIECE_INDEX[prevMove.piece];
+    if (pi === undefined) return;
+    this.counterMoves[pi][algebraicToIndexFast(prevMove.to)] = { from: move.from, to: move.to };
+  }
+
+  getCounterMove(prevMove) {
+    if (!prevMove) return null;
+    const pi = PIECE_INDEX[prevMove.piece];
+    if (pi === undefined) return null;
+    return this.counterMoves[pi][algebraicToIndexFast(prevMove.to)] || null;
+  }
+
+  /**
+   * Score a single move for ordering (TT move, then captures, killers,
+   * countermove, history), matching the priorities alpha-beta relies on.
+   * At level >= 4 in the main search (depth > 0), captures are classified by
+   * static exchange evaluation: winning/even exchanges sort above killers,
+   * losing exchanges drop below all quiet moves (standard SEE ordering).
+   */
+  scoreMoveForOrdering(move, depth, ttBestMove, counterMove, board, level) {
     if (ttBestMove && move.from === ttBestMove.from && move.to === ttBestMove.to) {
       return 20000; // TT best move first (no promotion bonus, as before)
     }
     let score;
     if (move.captured) {
-      score = pieceValueApprox(move.captured) * 10 - pieceValueApprox(move.piece) + 10000;
+      if (level >= 4 && depth > 0 && board) {
+        const see = seeCapture(board, algebraicToIndexFast(move.from), algebraicToIndexFast(move.to), move.isEnPassant);
+        score = see >= 0
+          ? 10000 + see + pieceValueApprox(move.captured)
+          : -5000 + see;
+      } else {
+        score = pieceValueApprox(move.captured) * 10 - pieceValueApprox(move.piece) + 10000;
+      }
     } else if (this.isKillerMove(move, depth)) {
       score = 9000;
+    } else if (counterMove && move.from === counterMove.from && move.to === counterMove.to) {
+      score = 8500;
     } else {
       score = this.getHistoryScore(move);
     }
@@ -929,10 +1005,10 @@ export class AI {
    * Order moves for better alpha-beta pruning efficiency. Decorate-then-sort:
    * each move is scored once (not recomputed inside every sort comparison).
    */
-  orderMoves(moves, depth, ttBestMove) {
+  orderMoves(moves, depth, ttBestMove, counterMove = null, board = null, level = 1) {
     const decorated = new Array(moves.length);
     for (let i = 0; i < moves.length; i++) {
-      decorated[i] = { move: moves[i], score: this.scoreMoveForOrdering(moves[i], depth, ttBestMove) };
+      decorated[i] = { move: moves[i], score: this.scoreMoveForOrdering(moves[i], depth, ttBestMove, counterMove, board, level) };
     }
     decorated.sort((a, b) => b.score - a.score);
     const ordered = new Array(moves.length);
@@ -1093,7 +1169,7 @@ export class AI {
     const isMaximizing = state.activeColor === color;
     const ttKey = level >= 3 ? state.hash : null;
     const ttBestMove = ttKey ? this.probeTTMove(ttKey) : null;
-    const ordered = this.orderMoves(legalMoves, depth, ttBestMove);
+    const ordered = this.orderMoves(legalMoves, depth, ttBestMove, null, state.board, level);
     if (ordered.length === 0) return null;
 
     const timedOut = () => timeout && startTime && Date.now() - startTime >= timeout;
@@ -1213,7 +1289,7 @@ export class AI {
   }
 
   minimax(state, depth, alpha, beta, rootColor, isMaximizing, level, timeout, startTime, allowNullMove = true, ply = 0) {
-    if (timeout && startTime && Date.now() - startTime >= timeout) {
+    if (this.isTimeUp(timeout, startTime)) {
       this.lastSearchInfo.timedOut = true;
       return null;
     }
@@ -1238,6 +1314,18 @@ export class AI {
       }
     }
 
+    // Mate-distance pruning (level >= 4): no mate score reachable from this
+    // node can exceed |MATE - ply - 1| (a mate needs at least one more ply),
+    // so clamp the window into that range. Tighter windows yield more cutoffs
+    // downstream and keep mate distances comparable across the tree. The
+    // fail-hard bound returns stay consistent with the TT flag logic below.
+    if (level >= 4 && ply > 0) {
+      const mateBound = MATE - ply - 1;
+      if (alpha < -mateBound) alpha = -mateBound;
+      if (beta > mateBound) beta = mateBound;
+      if (alpha >= beta) return maximizing ? alpha : beta;
+    }
+
     const inCheck = isInCheck(state);
     if (inCheck && depth > 0) {
       depth += 1;
@@ -1247,7 +1335,7 @@ export class AI {
       if (level >= 4) {
         // Propagate an aborted quiescence (null) rather than masking it with a
         // static eval, so a timed-out search never trusts a partial score.
-        return this.quiescence(state, alpha, beta, rootColor, evaluate(state, rootColor), timeout, startTime, level, ply);
+        return this.quiescence(state, alpha, beta, rootColor, this.evalCached(state, rootColor), timeout, startTime, level, ply);
       }
       return evaluate(state, rootColor);
     }
@@ -1272,7 +1360,7 @@ export class AI {
     // Static eval is only consumed by the level-6 shallow-depth RFP and futility
     // pruning; compute it lazily so levels 4-5 don't pay for it at every node.
     const needStaticEval = level >= 6 && !inCheck && depth <= 3;
-    const staticEval = needStaticEval ? evaluate(state, rootColor) : 0;
+    const staticEval = needStaticEval ? this.evalCached(state, rootColor) : 0;
 
     if (needStaticEval && allowNullMove) {
       const rfpMargin = RFP_MARGINS[depth] || 0;
@@ -1314,13 +1402,17 @@ export class AI {
         : staticEval - margin >= beta;
     }
 
-    const ordered = this.orderMoves(legalMoves, depth, ttBestMove);
+    // Countermove lookup: the move that led to this node (opponent's last move)
+    // indexes the refutation table. Level >= 4 keeps low-level play unchanged.
+    const lastMove = state.undoStack.length > 0 ? state.undoStack[state.undoStack.length - 1].move : null;
+    const counterMove = level >= 4 ? this.getCounterMove(lastMove) : null;
+    const ordered = this.orderMoves(legalMoves, depth, ttBestMove, counterMove, state.board, level);
     let bestMove = ordered[0];
 
     if (maximizing) {
       let value = -Infinity;
       for (let i = 0; i < ordered.length; i++) {
-        if (timeout && startTime && i % 10 === 0 && Date.now() - startTime >= timeout) {
+        if (i % 10 === 0 && this.isTimeUp(timeout, startTime)) {
           this.lastSearchInfo.timedOut = true;
           return null;
         }
@@ -1351,6 +1443,7 @@ export class AI {
         if (alpha >= beta) {
           this.lastSearchInfo.cutoffs += 1;
           this.storeKillerMove(move, depth);
+          if (level >= 4) this.storeCounterMove(lastMove, move);
           this.updateHistory(move, depth);
           break;
         }
@@ -1395,6 +1488,7 @@ export class AI {
       if (alpha >= beta) {
         this.lastSearchInfo.cutoffs += 1;
         this.storeKillerMove(move, depth);
+        if (level >= 4) this.storeCounterMove(lastMove, move);
         this.updateHistory(move, depth);
         break;
       }
@@ -1411,13 +1505,25 @@ export class AI {
   }
 
   quiescence(state, alpha, beta, rootColor, standPat, timeout, startTime, level, ply = 0) {
-    if (timeout && startTime && Date.now() - startTime >= timeout) {
+    if (this.isTimeUp(timeout, startTime)) {
       this.lastSearchInfo.timedOut = true;
       return null;
     }
 
     this.lastSearchInfo.qNodes += 1;
     const maximizing = state.activeColor === rootColor;
+
+    // Quiescence TT (levels 4-6): probe and store with depth 0. Any deeper
+    // main-search entry also satisfies a depth-0 probe, and depth-0 stores
+    // never clobber deeper entries (storeTable replacement guard).
+    const originalAlpha = alpha;
+    const originalBeta = beta;
+    const ttKey = level >= 4 ? state.hash : null;
+    if (ttKey) {
+      const ttScore = this.probeTable(ttKey, 0, alpha, beta, ply);
+      if (ttScore !== null) return ttScore;
+    }
+
     const inCheck = isInCheck(state);
 
     let value;
@@ -1444,11 +1550,11 @@ export class AI {
       noisyMoves = generateCaptureMoves(state);
     }
 
-    const movesToSearch = this.orderMoves(noisyMoves, 0, null);
+    const movesToSearch = this.orderMoves(noisyMoves, 0, null, null, null, level);
     const cappedMoves = level >= 6 ? movesToSearch : movesToSearch.slice(0, 16);
 
     for (let i = 0; i < cappedMoves.length; i++) {
-      if (timeout && startTime && i % 5 === 0 && Date.now() - startTime >= timeout) {
+      if (i % 5 === 0 && this.isTimeUp(timeout, startTime)) {
         this.lastSearchInfo.timedOut = true;
         return null;
       }
@@ -1466,7 +1572,7 @@ export class AI {
       }
 
       state.makeMove(move);
-      const score = this.quiescence(state, alpha, beta, rootColor, evaluate(state, rootColor), timeout, startTime, level, ply + 1);
+      const score = this.quiescence(state, alpha, beta, rootColor, this.evalCached(state, rootColor), timeout, startTime, level, ply + 1);
       state.undoMove();
 
       if (score === null) return null;
@@ -1483,6 +1589,13 @@ export class AI {
         this.lastSearchInfo.cutoffs += 1;
         break;
       }
+    }
+
+    if (ttKey) {
+      let flag = TT_EXACT;
+      if (value <= originalAlpha) flag = TT_UPPER;
+      else if (value >= originalBeta) flag = TT_LOWER;
+      this.storeTable(ttKey, 0, value, flag, null, ply);
     }
 
     return value;
@@ -1503,6 +1616,11 @@ export class AI {
         this.lastSearchInfo.timedOut = true;
         break;
       }
+      // Tail guard: with <25ms left a new (deeper) iteration cannot finish even
+      // its first root move, so it would be pure waste — stop and keep the last
+      // completed result instead. Partial results of iterations started earlier
+      // (with real time left) are still kept, so no usable info is thrown away.
+      if (timeout && currentDepth > 1 && Date.now() - startTime > timeout - 25) break;
 
       const move = this.searchRoot(state, legalMoves, currentDepth, color, {
         level,
