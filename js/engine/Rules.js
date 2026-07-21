@@ -129,8 +129,19 @@ export function generateLegalMoves(state) {
   const pseudoMoves = generatePseudoLegalMoves(state);
   const legal = [];
 
+  const board = state.board;
+  const moverColor = state.activeColor;
+  const enemy = oppositeColor(moverColor);
+  // Find the mover's king once (it doesn't move except for its own moves, which
+  // the legality check handles), instead of scanning per pseudo-move.
+  const kingCode = moverColor === "white" ? "wK" : "bK";
+  let kingIndex = -1;
+  for (let i = 0; i < 64; i += 1) {
+    if (board[i] === kingCode) { kingIndex = i; break; }
+  }
+
   for (const move of pseudoMoves) {
-    if (!leavesKingInCheck(state, move)) {
+    if (!moveLeavesKingInCheck(board, move, moverColor, enemy, kingIndex)) {
       legal.push(move);
     }
   }
@@ -477,38 +488,39 @@ export function getCheckedKingSquare(state) {
   return findKingSquare(state.board, state.activeColor);
 }
 
-/**
- * Whether a given square is attacked by a specific color.
- * Optimized: check attackers FROM target square perspective, exit early
- */
-function squareAttackedBy(state, targetSq, attackerColor) {
-  const { board } = state;
-  const targetIndex = algebraicToIndex(targetSq);
-  const { file: tf, rank: tr } = indexToFR(targetIndex);
+// Hoisted to module scope so the hot attack scan allocates nothing per call.
+const KNIGHT_JUMPS = [
+  [1, 2], [2, 1], [2, -1], [1, -2],
+  [-1, -2], [-2, -1], [-2, 1], [-1, 2],
+];
+const ORTHO_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const DIAG_DIRS = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
 
-  // 1. Check knight attacks FIRST
-  const knightJumps = [
-    [1, 2], [2, 1], [2, -1], [1, -2],
-    [-1, -2], [-2, -1], [-2, 1], [-1, 2]
-  ];
-  const knightCode = attackerColor === "white" ? "wN" : "bN";
-  for (const [df, dr] of knightJumps) {
-    const f = tf + df;
-    const r = tr + dr;
+/**
+ * Whether board[targetIndex] is attacked by attackerColor. Allocation-free and
+ * index-based; checks attackers FROM the target square and exits early.
+ */
+function squareIndexAttackedBy(board, targetIndex, attackerColor) {
+  const tf = targetIndex % 8;
+  const tr = (targetIndex - tf) / 8;
+  const white = attackerColor === "white";
+
+  const knightCode = white ? "wN" : "bN";
+  for (let i = 0; i < 8; i++) {
+    const f = tf + KNIGHT_JUMPS[i][0];
+    const r = tr + KNIGHT_JUMPS[i][1];
     if (f < 0 || f > 7 || r < 0 || r > 7) continue;
     if (board[r * 8 + f] === knightCode) return true;
   }
 
-  // 2. Check pawn attacks
-  const pawnCode = attackerColor === "white" ? "wP" : "bP";
-  const pawnDir = attackerColor === "white" ? -1 : 1; // Attackers come from opposite direction
-  if (tr + pawnDir >= 0 && tr + pawnDir <= 7) {
-    if (tf > 0 && board[(tr + pawnDir) * 8 + (tf - 1)] === pawnCode) return true;
-    if (tf < 7 && board[(tr + pawnDir) * 8 + (tf + 1)] === pawnCode) return true;
+  const pawnCode = white ? "wP" : "bP";
+  const pr = tr + (white ? -1 : 1); // attackers come from the opposite direction
+  if (pr >= 0 && pr <= 7) {
+    if (tf > 0 && board[pr * 8 + tf - 1] === pawnCode) return true;
+    if (tf < 7 && board[pr * 8 + tf + 1] === pawnCode) return true;
   }
 
-  // 3. Check king attacks
-  const kingCode = attackerColor === "white" ? "wK" : "bK";
+  const kingCode = white ? "wK" : "bK";
   for (let df = -1; df <= 1; df++) {
     for (let dr = -1; dr <= 1; dr++) {
       if (df === 0 && dr === 0) continue;
@@ -519,44 +531,36 @@ function squareAttackedBy(state, targetSq, attackerColor) {
     }
   }
 
-  // 4. Check sliding pieces (bishop, rook, queen)
-  const orthogonalDirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-  const diagonalDirs = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+  const rookCode = white ? "wR" : "bR";
+  const bishopCode = white ? "wB" : "bB";
+  const queenCode = white ? "wQ" : "bQ";
 
-  const orthoCandidates = attackerColor === "white" 
-    ? ['wR', 'wQ'] 
-    : ['bR', 'bQ'];
-
-  const diagonalCandidates = attackerColor === "white"
-    ? ['wB', 'wQ']
-    : ['bB', 'bQ'];
-
-  // Check orthogonal directions first
-  for (const [df, dr] of orthogonalDirs) {
+  for (let i = 0; i < 4; i++) {
+    const df = ORTHO_DIRS[i][0];
+    const dr = ORTHO_DIRS[i][1];
     let f = tf + df;
     let r = tr + dr;
-
     while (f >= 0 && f <= 7 && r >= 0 && r <= 7) {
       const piece = board[r * 8 + f];
       if (piece) {
-        if (orthoCandidates.includes(piece)) return true;
-        break; // Blocked by any piece
+        if (piece === rookCode || piece === queenCode) return true;
+        break;
       }
       f += df;
       r += dr;
     }
   }
 
-  // Check diagonal directions
-  for (const [df, dr] of diagonalDirs) {
+  for (let i = 0; i < 4; i++) {
+    const df = DIAG_DIRS[i][0];
+    const dr = DIAG_DIRS[i][1];
     let f = tf + df;
     let r = tr + dr;
-
     while (f >= 0 && f <= 7 && r >= 0 && r <= 7) {
       const piece = board[r * 8 + f];
       if (piece) {
-        if (diagonalCandidates.includes(piece)) return true;
-        break; // Blocked by any piece
+        if (piece === bishopCode || piece === queenCode) return true;
+        break;
       }
       f += df;
       r += dr;
@@ -567,77 +571,70 @@ function squareAttackedBy(state, targetSq, attackerColor) {
 }
 
 /**
+ * Whether a given square (algebraic) is attacked by a specific color.
+ */
+function squareAttackedBy(state, targetSq, attackerColor) {
+  return squareIndexAttackedBy(state.board, algebraicToIndex(targetSq), attackerColor);
+}
+
+/**
  * Check if applying a move leaves own king in check.
  * Used to filter pseudo-legal moves.
  * @param {Object} state
  * @param {Move} move
  */
-function leavesKingInCheck(state, move) {
-  const clone = {
-    board: state.board.slice(),
-    activeColor: state.activeColor,
-    castlingRights: {
-      white: { ...state.castlingRights.white },
-      black: { ...state.castlingRights.black }
-    },
-    enPassantTarget: state.enPassantTarget,
-  };
-
-  // Apply move minimally; GameState has full application logic,
-  // but for legality we only need piece placements + king location.
+function moveLeavesKingInCheck(board, move, moverColor, enemy, kingIndex) {
   const fromIndex = algebraicToIndex(move.from);
   const toIndex = algebraicToIndex(move.to);
+  const movingPiece = board[fromIndex];
 
-  clone.board[fromIndex] = null;
+  // Apply the move in place on the real board (no allocation), test, then revert.
+  const savedFrom = board[fromIndex];
+  const savedTo = board[toIndex];
+  board[fromIndex] = null;
 
+  let epCapIndex = -1;
+  let epSaved = null;
   if (move.isEnPassant) {
-    // Remove captured pawn behind target square
-    const dir = getColorOf(move.piece) === "white" ? -1 : 1;
-    const { file: tf, rank: tr } = indexToFR(toIndex);
-    const capIndex = (tr + dir) * 8 + tf;
-    clone.board[capIndex] = null;
+    const dir = moverColor === "white" ? -1 : 1;
+    const tf = toIndex % 8;
+    const tr = (toIndex - tf) / 8;
+    epCapIndex = (tr + dir) * 8 + tf;
+    epSaved = board[epCapIndex];
+    board[epCapIndex] = null;
   }
 
   if (move.promotion) {
-    const color = getColorOf(move.piece) === "white" ? "w" : "b";
-    clone.board[toIndex] = `${color}${move.promotion}`;
+    board[toIndex] = `${moverColor === "white" ? "w" : "b"}${move.promotion}`;
   } else {
-    clone.board[toIndex] = move.piece;
+    board[toIndex] = movingPiece;
   }
 
-  // Castling: move rook for attack map correctness.
+  let rookFrom = -1;
+  let rookTo = -1;
+  let rookSavedFrom = null;
+  let rookSavedTo = null;
   if (move.isCastleKingSide || move.isCastleQueenSide) {
-    const color = getColorOf(move.piece);
-    const rank = color === "white" ? 0 : 7;
-    if (move.isCastleKingSide) {
-      const rookFrom = rank * 8 + 7;
-      const rookTo = rank * 8 + 5;
-      clone.board[rookTo] = clone.board[rookFrom];
-      clone.board[rookFrom] = null;
-    } else {
-      const rookFrom = rank * 8 + 0;
-      const rookTo = rank * 8 + 3;
-      clone.board[rookTo] = clone.board[rookFrom];
-      clone.board[rookFrom] = null;
-    }
+    const rank = moverColor === "white" ? 0 : 7;
+    if (move.isCastleKingSide) { rookFrom = rank * 8 + 7; rookTo = rank * 8 + 5; }
+    else { rookFrom = rank * 8 + 0; rookTo = rank * 8 + 3; }
+    rookSavedFrom = board[rookFrom];
+    rookSavedTo = board[rookTo];
+    board[rookTo] = board[rookFrom];
+    board[rookFrom] = null;
   }
 
-  const moverColor = state.activeColor;
-  const enemy = oppositeColor(moverColor);
-  const kingSq = findKingSquare(clone.board, moverColor);
-  if (!kingSq) {
-    // Should not happen in valid chess, but treat as illegal.
-    return true;
-  }
-  return squareAttackedBy(
-    {
-      board: clone.board,
-      activeColor: enemy,
-      castlingRights: clone.castlingRights,
-      enPassantTarget: clone.enPassantTarget,
-    },
-    kingSq,
-    enemy
-  );
+  // The king's square after the move: its destination if the king moved (incl.
+  // castling), otherwise the precomputed king index.
+  const kIndex = (movingPiece === "wK" || movingPiece === "bK") ? toIndex : kingIndex;
+  const inCheck = kIndex < 0 ? true : squareIndexAttackedBy(board, kIndex, enemy);
+
+  // Revert.
+  board[fromIndex] = savedFrom;
+  board[toIndex] = savedTo;
+  if (epCapIndex >= 0) board[epCapIndex] = epSaved;
+  if (rookFrom >= 0) { board[rookFrom] = rookSavedFrom; board[rookTo] = rookSavedTo; }
+
+  return inCheck;
 }
 

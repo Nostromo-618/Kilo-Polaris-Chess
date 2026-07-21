@@ -240,7 +240,8 @@ export class SearchState {
       move,
       hash: this.hash,
       activeColor: this.activeColor,
-      castlingRights: JSON.parse(JSON.stringify(this.castlingRights)),
+      // castlingRights is captured just before it is mutated, below.
+      castlingRights: null,
       enPassantTarget: this.enPassantTarget,
       halfmoveClock: this.halfmoveClock,
       fullmoveNumber: this.fullmoveNumber,
@@ -372,8 +373,12 @@ export class SearchState {
       }
     }
 
-    // Update castling rights
-    undo.castlingRights = JSON.parse(JSON.stringify(this.castlingRights));
+    // Update castling rights (shallow structured copy — leaves are booleans —
+    // is far cheaper than a JSON round-trip on this hot path).
+    undo.castlingRights = {
+      white: { ...this.castlingRights.white },
+      black: { ...this.castlingRights.black },
+    };
     updateCastlingRightsSearch(this, move, fromIndex, toIndex, movingPiece);
 
     // Hash new castling rights
@@ -769,44 +774,38 @@ export class AI {
   }
 
   /**
-   * Order moves for better alpha-beta pruning efficiency.
-   * For Level 6: TT best move gets highest priority.
+   * Score a single move for ordering (TT move, then MVV-LVA captures, killers,
+   * history), matching the priorities alpha-beta relies on.
+   */
+  scoreMoveForOrdering(move, depth, ttBestMove) {
+    if (ttBestMove && move.from === ttBestMove.from && move.to === ttBestMove.to) {
+      return 20000; // TT best move first (no promotion bonus, as before)
+    }
+    let score;
+    if (move.captured) {
+      score = pieceValueApprox(move.captured) * 10 - pieceValueApprox(move.piece) + 10000;
+    } else if (this.isKillerMove(move, depth)) {
+      score = 9000;
+    } else {
+      score = this.getHistoryScore(move);
+    }
+    if (move.promotion) score += pieceValueApprox(move.promotion) * 10;
+    return score;
+  }
+
+  /**
+   * Order moves for better alpha-beta pruning efficiency. Decorate-then-sort:
+   * each move is scored once (not recomputed inside every sort comparison).
    */
   orderMoves(moves, depth, ttBestMove) {
-    return moves.slice().sort((a, b) => {
-      let aScore = 0;
-      let bScore = 0;
-
-      // TT best move gets top priority
-      if (ttBestMove) {
-        if (a.from === ttBestMove.from && a.to === ttBestMove.to) aScore = 20000;
-        if (b.from === ttBestMove.from && b.to === ttBestMove.to) bScore = 20000;
-      }
-
-      if (aScore < 20000) {
-        if (a.captured) {
-          aScore = pieceValueApprox(a.captured) * 10 - pieceValueApprox(a.piece) + 10000;
-        } else if (this.isKillerMove(a, depth)) {
-          aScore = 9000;
-        } else {
-          aScore = this.getHistoryScore(a);
-        }
-        if (a.promotion) aScore += pieceValueApprox(a.promotion) * 10;
-      }
-
-      if (bScore < 20000) {
-        if (b.captured) {
-          bScore = pieceValueApprox(b.captured) * 10 - pieceValueApprox(b.piece) + 10000;
-        } else if (this.isKillerMove(b, depth)) {
-          bScore = 9000;
-        } else {
-          bScore = this.getHistoryScore(b);
-        }
-        if (b.promotion) bScore += pieceValueApprox(b.promotion) * 10;
-      }
-
-      return bScore - aScore;
-    });
+    const decorated = new Array(moves.length);
+    for (let i = 0; i < moves.length; i++) {
+      decorated[i] = { move: moves[i], score: this.scoreMoveForOrdering(moves[i], depth, ttBestMove) };
+    }
+    decorated.sort((a, b) => b.score - a.score);
+    const ordered = new Array(moves.length);
+    for (let i = 0; i < moves.length; i++) ordered[i] = decorated[i].move;
+    return ordered;
   }
 
   /**
