@@ -36,7 +36,7 @@
  */
 
 import { oppositeColor, cloneBoard } from "./Board.js";
-import { generateLegalMoves, isInCheck } from "./Rules.js";
+import { generateLegalMoves, generateCaptureMoves, isInCheck } from "./Rules.js";
 import { evaluate } from "./Evaluator.js";
 
 /**
@@ -1273,17 +1273,21 @@ export class AI {
     this.lastSearchInfo.qNodes += 1;
     const maximizing = state.activeColor === rootColor;
     const inCheck = isInCheck(state);
-    const legalMoves = generateLegalMoves(state);
 
-    if (legalMoves.length === 0) {
-      if (inCheck) {
+    let value;
+    let noisyMoves;
+    if (inCheck) {
+      // In check: no stand-pat; search all legal evasions and detect checkmate.
+      noisyMoves = generateLegalMoves(state);
+      if (noisyMoves.length === 0) {
         return state.activeColor === rootColor ? -(MATE - ply) : (MATE - ply);
       }
-      return 0;
-    }
-
-    let value = standPat;
-    if (!inCheck) {
+      // Bounded mated start (never ±Infinity, which could leak on abort).
+      value = maximizing ? -(MATE - ply) : (MATE - ply);
+    } else {
+      // Not in check: stand-pat, then search only noisy moves (captures /
+      // promotions / en passant) generated directly — no full legal-move scan.
+      value = standPat;
       if (maximizing) {
         if (value >= beta) return value;
         if (value > alpha) alpha = value;
@@ -1291,15 +1295,8 @@ export class AI {
         if (value <= alpha) return value;
         if (value < beta) beta = value;
       }
-    } else {
-      // In check there is no stand-pat; start from a bounded mated score (never
-      // ±Infinity, which could leak upward on abort and poison the TT).
-      value = maximizing ? -(MATE - ply) : (MATE - ply);
+      noisyMoves = generateCaptureMoves(state);
     }
-
-    const noisyMoves = inCheck
-      ? legalMoves
-      : legalMoves.filter((m) => m.captured || m.promotion || m.isEnPassant);
 
     const movesToSearch = this.orderMoves(noisyMoves, 0, null);
     const cappedMoves = level >= 6 ? movesToSearch : movesToSearch.slice(0, 16);

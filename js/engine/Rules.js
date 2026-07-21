@@ -150,6 +150,36 @@ export function generateLegalMoves(state) {
 }
 
 /**
+ * Generate legal "noisy" moves only — captures, promotions, and en passant —
+ * for quiescence search. Much cheaper than generateLegalMoves + filter because
+ * the legality check runs only on the handful of noisy moves, not every quiet.
+ * @param {Object} state
+ * @returns {Move[]}
+ */
+export function generateCaptureMoves(state) {
+  const pseudoMoves = generatePseudoLegalMoves(state);
+  const legal = [];
+
+  const board = state.board;
+  const moverColor = state.activeColor;
+  const enemy = oppositeColor(moverColor);
+  const kingCode = moverColor === "white" ? "wK" : "bK";
+  let kingIndex = -1;
+  for (let i = 0; i < 64; i += 1) {
+    if (board[i] === kingCode) { kingIndex = i; break; }
+  }
+
+  for (const move of pseudoMoves) {
+    if (!(move.captured || move.promotion || move.isEnPassant)) continue;
+    if (!moveLeavesKingInCheck(board, move, moverColor, enemy, kingIndex)) {
+      legal.push(move);
+    }
+  }
+
+  return legal;
+}
+
+/**
  * Determine if the side to move is currently in check.
  * @param {Object} state
  * @param {"white"|"black"} [colorOverride] if provided, check that color instead
