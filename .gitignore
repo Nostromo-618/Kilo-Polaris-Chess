@@ -37,5 +37,6 @@ tests/matches/results/
 # VS Code
 .vscode/
 
-# Engine phase snapshot (throwaway, for phase-vs-phase self-play)
+# Engine phase snapshots (throwaway, for phase-vs-phase comparison)
 .phase1/
+.prepvs/

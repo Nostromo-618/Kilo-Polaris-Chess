@@ -1195,11 +1195,18 @@ export class AI {
 
         const reduction = this.computeReduction(level, depth, i, move, inCheck);
         state.makeMove(move);
-        let child = this.minimax(
-          state, depth - 1 - reduction, alpha, beta, rootColor, false, level, timeout, startTime, true, ply + 1
-        );
-        if (child !== null && reduction > 0 && child > alpha) {
+        let child;
+        if (i === 0) {
+          // First (principal variation) move: full window at full depth.
           child = this.minimax(state, depth - 1, alpha, beta, rootColor, false, level, timeout, startTime, true, ply + 1);
+        } else {
+          // Later moves: null-window scout (with any LMR reduction).
+          child = this.minimax(state, depth - 1 - reduction, alpha, alpha + 1, rootColor, false, level, timeout, startTime, true, ply + 1);
+          // Re-search at full depth + full window if the scout beat alpha and a
+          // real window remains (this also un-does any LMR reduction).
+          if (child !== null && child > alpha && (beta - alpha > 1 || reduction > 0)) {
+            child = this.minimax(state, depth - 1, alpha, beta, rootColor, false, level, timeout, startTime, true, ply + 1);
+          }
         }
         state.undoMove();
 
@@ -1235,11 +1242,15 @@ export class AI {
 
       const reduction = this.computeReduction(level, depth, i, move, inCheck);
       state.makeMove(move);
-      let child = this.minimax(
-        state, depth - 1 - reduction, alpha, beta, rootColor, true, level, timeout, startTime, true, ply + 1
-      );
-      if (child !== null && reduction > 0 && child < beta) {
+      let child;
+      if (i === 0) {
         child = this.minimax(state, depth - 1, alpha, beta, rootColor, true, level, timeout, startTime, true, ply + 1);
+      } else {
+        // Null-window scout around the current beta (with any LMR reduction).
+        child = this.minimax(state, depth - 1 - reduction, beta - 1, beta, rootColor, true, level, timeout, startTime, true, ply + 1);
+        if (child !== null && child < beta && (beta - alpha > 1 || reduction > 0)) {
+          child = this.minimax(state, depth - 1, alpha, beta, rootColor, true, level, timeout, startTime, true, ply + 1);
+        }
       }
       state.undoMove();
 
