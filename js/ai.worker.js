@@ -21,8 +21,18 @@ const ai = new AI();
 /**
  * Handle incoming messages from main thread
  */
+// Cooperative-abort signal for the in-progress search. A "stop" message flips
+// it, and the search stops at the next iteration boundary and returns its best
+// move so far — without terminating (and rebuilding) the worker.
+let activeSignal = null;
+
 self.onmessage = async function (event) {
   const { type, state, level, forColor, timeout, history } = event.data;
+
+  if (type === "stop") {
+    if (activeSignal) activeSignal.aborted = true;
+    return;
+  }
 
   if (type !== "search") {
     self.postMessage({ type: "error", message: `Unknown message type: ${type}` });
@@ -61,13 +71,21 @@ self.onmessage = async function (event) {
     };
 
     // Run the search
-    const move = await ai.findBestMove(searchState, {
-      level: level,
-      forColor: forColor,
-      timeout: timeout || 10000,
-      history: Array.isArray(history) ? history : [],
-      onInfo: (info) => self.postMessage({ type: "info", info }),
-    });
+    const signal = { aborted: false };
+    activeSignal = signal;
+    let move;
+    try {
+      move = await ai.findBestMove(searchState, {
+        level: level,
+        forColor: forColor,
+        timeout: timeout || 10000,
+        history: Array.isArray(history) ? history : [],
+        signal,
+        onInfo: (info) => self.postMessage({ type: "info", info }),
+      });
+    } finally {
+      if (activeSignal === signal) activeSignal = null;
+    }
 
     // Send result back to main thread
     self.postMessage({ type: "result", move: move, info: ai.getLastSearchInfo() });

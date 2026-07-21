@@ -581,6 +581,138 @@ function pieceValueApprox(piece) {
   return PIECE_VALUES[type] || 0;
 }
 
+/* === Static Exchange Evaluation (SEE) === */
+
+const SEE_VALUES = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 20000 };
+const SEE_KNIGHT = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]];
+const SEE_ORTHO = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const SEE_DIAG = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+
+/**
+ * Least valuable piece of `side` (`"w"`/`"b"`) attacking targetIndex, given the
+ * current occupancy `occ`. Returns { index, type } or null. Slider rays respect
+ * occupancy, so removing a front attacker reveals x-ray attackers behind it.
+ */
+function seeLeastAttacker(occ, targetIndex, side) {
+  const tf = targetIndex % 8;
+  const tr = (targetIndex - tf) / 8;
+
+  // Pawn (a `side` pawn attacks the target from the rank one step "behind" it).
+  const pawnCode = side + "P";
+  const pr = tr + (side === "w" ? -1 : 1);
+  if (pr >= 0 && pr <= 7) {
+    if (tf > 0 && occ[pr * 8 + tf - 1] === pawnCode) return { index: pr * 8 + tf - 1, type: "P" };
+    if (tf < 7 && occ[pr * 8 + tf + 1] === pawnCode) return { index: pr * 8 + tf + 1, type: "P" };
+  }
+
+  const knightCode = side + "N";
+  for (let i = 0; i < 8; i++) {
+    const f = tf + SEE_KNIGHT[i][0];
+    const r = tr + SEE_KNIGHT[i][1];
+    if (f >= 0 && f <= 7 && r >= 0 && r <= 7 && occ[r * 8 + f] === knightCode) return { index: r * 8 + f, type: "N" };
+  }
+
+  const bishopCode = side + "B";
+  const rookCode = side + "R";
+  const queenCode = side + "Q";
+  let diagQueen = -1;
+  let orthoQueen = -1;
+
+  for (let i = 0; i < 4; i++) {
+    const df = SEE_DIAG[i][0];
+    const dr = SEE_DIAG[i][1];
+    let f = tf + df;
+    let r = tr + dr;
+    while (f >= 0 && f <= 7 && r >= 0 && r <= 7) {
+      const p = occ[r * 8 + f];
+      if (p) {
+        if (p === bishopCode) return { index: r * 8 + f, type: "B" };
+        if (p === queenCode && diagQueen < 0) diagQueen = r * 8 + f;
+        break;
+      }
+      f += df; r += dr;
+    }
+  }
+
+  for (let i = 0; i < 4; i++) {
+    const df = SEE_ORTHO[i][0];
+    const dr = SEE_ORTHO[i][1];
+    let f = tf + df;
+    let r = tr + dr;
+    while (f >= 0 && f <= 7 && r >= 0 && r <= 7) {
+      const p = occ[r * 8 + f];
+      if (p) {
+        if (p === rookCode) return { index: r * 8 + f, type: "R" };
+        if (p === queenCode && orthoQueen < 0) orthoQueen = r * 8 + f;
+        break;
+      }
+      f += df; r += dr;
+    }
+  }
+
+  if (diagQueen >= 0) return { index: diagQueen, type: "Q" };
+  if (orthoQueen >= 0) return { index: orthoQueen, type: "Q" };
+
+  const kingCode = side + "K";
+  for (let df = -1; df <= 1; df++) {
+    for (let dr = -1; dr <= 1; dr++) {
+      if (df === 0 && dr === 0) continue;
+      const f = tf + df;
+      const r = tr + dr;
+      if (f >= 0 && f <= 7 && r >= 0 && r <= 7 && occ[r * 8 + f] === kingCode) return { index: r * 8 + f, type: "K" };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Static Exchange Evaluation for the capture from->to (en passant supported).
+ * Returns the net material (centipawns) the moving side gains if both sides
+ * play the exchange out with least-valuable-attacker recaptures. Negative means
+ * the capture loses material.
+ */
+export function seeCapture(board, fromIndex, toIndex, isEnPassant) {
+  const occ = board.slice();
+  const moverPiece = occ[fromIndex];
+  if (!moverPiece) return 0;
+  const moverSide = moverPiece[0];
+
+  let capturedType;
+  if (isEnPassant) {
+    occ[toIndex + (moverSide === "w" ? -8 : 8)] = null; // remove the ep-captured pawn
+    capturedType = "P";
+  } else {
+    const victim = occ[toIndex];
+    if (!victim) return 0;
+    capturedType = victim[1];
+  }
+
+  const gain = [];
+  gain[0] = SEE_VALUES[capturedType] || 0;
+  occ[fromIndex] = null; // the first attacker moves onto the target
+
+  let attackerType = moverPiece[1];
+  let side = moverSide === "w" ? "b" : "w";
+  let d = 0;
+
+  while (true) {
+    d += 1;
+    gain[d] = (SEE_VALUES[attackerType] || 0) - gain[d - 1];
+    if (Math.max(-gain[d - 1], gain[d]) < 0) break; // this side can't gain by continuing
+    const lva = seeLeastAttacker(occ, toIndex, side);
+    if (!lva) break;
+    occ[lva.index] = null;
+    attackerType = lva.type;
+    side = side === "w" ? "b" : "w";
+  }
+
+  while (--d > 0) {
+    gain[d - 1] = -Math.max(-gain[d - 1], gain[d]);
+  }
+  return gain[0];
+}
+
 /* === AI core === */
 
 /** Mate scoring. Scores with |value| >= MATE_THRESHOLD encode a forced mate;
@@ -919,9 +1051,12 @@ export class AI {
     }
 
     if (clampedLevel >= 2) {
+      // A cooperative abort mid-search returns the best move from the last fully
+      // completed depth (progressiveDeepeningSearch breaks and keeps it), rather
+      // than discarding the whole search.
       const move = await this.progressiveDeepeningSearch(baseState, legalMoves, depth, searchColor, clampedLevel, timeout, signal, onInfo);
       onInfo?.(this.getLastSearchInfo());
-      return signal?.aborted ? null : move;
+      return move;
     }
 
     return new Promise((resolve) => {
@@ -1319,6 +1454,11 @@ export class AI {
       }
 
       const move = cappedMoves[i];
+      if (!inCheck && level >= 5 && move.captured && !move.promotion) {
+        // Skip captures that lose material by static exchange evaluation — a
+        // horizon capture that loses an exchange is not worth searching.
+        if (seeCapture(state.board, algebraicToIndexFast(move.from), algebraicToIndexFast(move.to), move.isEnPassant) < 0) continue;
+      }
       if (!inCheck && level >= 6 && !move.promotion) {
         const capturedValue = pieceValueApprox(move.captured);
         if (maximizing && standPat + capturedValue + 200 < alpha) continue;
@@ -1356,7 +1496,9 @@ export class AI {
     let previousBestScore = undefined;
 
     for (let currentDepth = 1; currentDepth <= maxDepth; currentDepth++) {
-      if (signal?.aborted) return null;
+      // Cooperative abort: stop deepening and keep the best move from the last
+      // completed depth (the worker can set this without being terminated).
+      if (signal?.aborted) break;
       if (timeout && Date.now() - startTime >= timeout) {
         this.lastSearchInfo.timedOut = true;
         break;
@@ -1380,10 +1522,11 @@ export class AI {
 
       if (this.lastSearchInfo.timedOut) break;
 
-      // Keep deepening: a complex position runs until the time budget is hit
-      // (the last completed depth is retained on timeout), while a simple
-      // position stops promptly once it reaches the depth cap.
-      await Promise.resolve();
+      // Yield to the macrotask queue between iterations so the worker can
+      // process a cooperative "stop" message (a microtask yield would not let
+      // a queued message run). A complex position otherwise deepens until the
+      // time budget; a simple one stops at the depth cap.
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
     return bestMove;
