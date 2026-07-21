@@ -1,8 +1,45 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v3.1.0",
+    date: "July 21, 2026",
+    latest: true,
+    columns: [
+      {
+        title: "Engine",
+        groups: [
+          {
+            title: "Aurora Polaris — much stronger play",
+            items: [
+              {
+                icon: "ph-bug",
+                title: "Fixed evaluation & search bugs",
+                body: "Corrected inverted piece-square tables (the engine now advances pawns and keeps its king safe), fixed passed-pawn scoring, and repaired several search bugs (mate-distance handling, aspiration windows, quiescence, and time-out handling). The engine is now dramatically stronger at levels 4–6 — new self-play beats the previous build overwhelmingly.",
+              },
+              {
+                icon: "ph-shield-check",
+                title: "Draw awareness",
+                body: "The search now understands threefold repetition and the fifty-move rule, so it no longer shuffles a won position into a draw — while still preferring the fastest checkmate.",
+              },
+              {
+                icon: "ph-clock",
+                title: "Time-managed thinking",
+                body: "Levels 4–6 now deepen to fill a per-move time budget instead of stopping at a fixed depth (level 6 uses its full budget and searches noticeably deeper). Levels 1–3 stay light and fast.",
+              },
+              {
+                icon: "ph-lightning",
+                title: "Roughly 2× faster search",
+                body: "Allocation-free move legality, a capture-only quiescence generator, principal-variation search, and static exchange evaluation roughly doubled search speed, so the engine reaches greater depth in the same time.",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: "v3.0.0",
     date: "July 12, 2026",
-    latest: true,
+    latest: false,
     columns: [
       {
         title: "UI",
