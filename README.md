@@ -14,7 +14,8 @@ UI is built with **[Vanduo UI (vd3)](https://github.com/vanduo-oss/vd3)** on Vue
   with difficulty levels 1–6, run in a Web Worker so the UI stays responsive.
 - **TomitankChess** (GPL-3.0, vendored) is available as a strong alternative engine.
 - Engine Match mode: Aurora vs Aurora / Tomitank with per-side strength, per-move
-  time, board perspective, pause/resume/stop, score, and move log.
+  time, board perspective, an optional full-strength (uncapped) Tomitank, an
+  in-app explainer of the setup, pause/resume/stop, score, and move log.
 - Board size slider, theme controls, move history, and persisted settings.
 
 ## Quick start

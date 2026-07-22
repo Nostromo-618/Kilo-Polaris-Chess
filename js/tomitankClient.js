@@ -132,9 +132,11 @@ export class TomitankClient {
    * @param {Object} opts
    * @param {number} opts.movetime — ms
    * @param {number} opts.difficulty — 1..6 → depth hint
+   * @param {boolean} [opts.uncapped] — ignore the per-level depth cap and let
+   *   Tomitank's own time manager bind (equal-time, full-strength control).
    * @returns {Promise<import("./engine/Move.js").Move|null>}
    */
-  async findBestMove(gameState, { movetime, difficulty, signal, onInfo } = {}) {
+  async findBestMove(gameState, { movetime, difficulty, signal, onInfo, uncapped = false } = {}) {
     await this.init();
     if (signal?.aborted) return null;
 
@@ -192,7 +194,10 @@ export class TomitankClient {
       this.activeSearchStop = stopCurrentSearch;
 
       this.worker.postMessage(`position fen ${fen}`);
-      this.worker.postMessage(`go movetime ${mt} depth ${depth}`);
+      // Uncapped: `go movetime N` (no depth token) searches iterative-deepening
+      // until the time budget is spent — the standard UCI match call, so both
+      // engines get equal thinking time. Default keeps the per-level depth cap.
+      this.worker.postMessage(uncapped ? `go movetime ${mt}` : `go movetime ${mt} depth ${depth}`);
     });
 
     if (uciBest == null) return null;

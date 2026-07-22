@@ -8,6 +8,7 @@ import GamePanel from "./components/GamePanel.vue";
 import GameEndModal from "./components/modals/GameEndModal.vue";
 import DisclaimerModal from "./components/modals/DisclaimerModal.vue";
 import ChangelogModal from "./components/modals/ChangelogModal.vue";
+import MatchInfoModal from "./components/modals/MatchInfoModal.vue";
 import { useGameStore } from "./composables/useGameStore.js";
 import { useModals } from "./composables/useModals.js";
 
@@ -40,6 +41,7 @@ onMounted(async () => {
     <GameEndModal />
     <DisclaimerModal />
     <ChangelogModal />
+    <MatchInfoModal />
     <!-- Aurora Polaris sticks to the Open Color palette, so the palette
          selector (Open Color / Fibonacci) is hidden. -->
     <VdThemeCustomizer :show-palette="false" />

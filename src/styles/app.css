@@ -297,6 +297,124 @@
   min-width: 0;
 }
 
+.match-info-row {
+  display: flex;
+}
+
+.match-info-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+}
+
+.match-info-link:hover,
+.match-info-link:focus-visible {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.match-hint {
+  margin: -0.35rem 0 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+/* ── Match info modal ──────────────────────────────────────────────────── */
+.match-info-lead {
+  margin-top: 0;
+  color: var(--text-secondary);
+}
+
+.match-info-section {
+  margin-bottom: 1rem;
+}
+
+.match-info-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.35rem;
+}
+
+.match-info-section h4 i {
+  color: var(--color-primary);
+}
+
+.match-info-section p {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.match-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6rem 0;
+  font-size: var(--font-size-sm);
+}
+
+.match-info-table th,
+.match-info-table td {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.match-info-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.match-info-note {
+  margin: 0.5rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.match-info-smallprint {
+  margin: 1rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Wide, landscape layout for the match info modal. */
+.vd-modal-dialog:has(#match-info-modal),
+.vd-modal-panel:has(#match-info-modal) {
+  --vd-modal-dialog-max-width: 1040px;
+  max-width: min(1040px, 94vw);
+}
+
+.match-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem 2.25rem;
+}
+
+.match-info-grid .match-info-section {
+  margin-bottom: 0.5rem;
+}
+
+.match-info-section--wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 680px) {
+  .match-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Status ────────────────────────────────────────────────────────────── */
 .status-panel {
   display: flex;

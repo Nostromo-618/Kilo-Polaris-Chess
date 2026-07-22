@@ -19,6 +19,7 @@
  *   kpc-match-black-strength "1" … "6"
  *   kpc-match-movetime       per-move milliseconds
  *   kpc-match-perspective    "white" | "black"
+ *   kpc-match-uncapped       "true" when Tomitank ignores its level depth cap (match mode)
  */
 
 const KEYS = {
@@ -36,6 +37,7 @@ const KEYS = {
   MATCH_BLACK_STRENGTH: 'kpc-match-black-strength',
   MATCH_MOVETIME: 'kpc-match-movetime',
   MATCH_PERSPECTIVE: 'kpc-match-perspective',
+  MATCH_UNCAPPED: 'kpc-match-uncapped',
 };
 
 /**
@@ -227,6 +229,21 @@ export function getMatchPerspective() {
 /** @param {"white"|"black"} color */
 export function setMatchPerspective(color) {
   write(KEYS.MATCH_PERSPECTIVE, color === 'black' ? 'black' : 'white');
+}
+
+/**
+ * Match-only: when true, Tomitank searches to the move-time budget instead of
+ * being capped at its per-level depth (full-strength control). Human-vs-CPU
+ * play is unaffected — this flag never reaches that path.
+ * @returns {boolean}
+ */
+export function getMatchUncapped() {
+  return read(KEYS.MATCH_UNCAPPED) === 'true';
+}
+
+/** @param {boolean} value */
+export function setMatchUncapped(value) {
+  write(KEYS.MATCH_UNCAPPED, value ? 'true' : 'false');
 }
 
 // ── Difficulty ───────────────────────────────────────────────────────────────

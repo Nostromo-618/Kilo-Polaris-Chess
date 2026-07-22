@@ -39,6 +39,8 @@ import {
   setMatchMoveTime,
   getMatchPerspective,
   setMatchPerspective,
+  getMatchUncapped,
+  setMatchUncapped,
 } from "../../js/storage.js";
 import { getTomitankClient } from "../../js/tomitankClient.js";
 import {
@@ -91,6 +93,7 @@ function createGameStore() {
     blackStrength: getMatchBlackStrength(),
     movetime: getMatchMoveTime(),
     perspective: getMatchPerspective(),
+    uncapped: getMatchUncapped(),
     running: false,
     paused: false,
     pauseRequested: false,
@@ -426,6 +429,7 @@ function createGameStore() {
       blackStrength: setMatchBlackStrength,
       movetime: setMatchMoveTime,
       perspective: setMatchPerspective,
+      uncapped: setMatchUncapped,
     }[field];
     persist?.(value);
     if (field === "perspective" && game && playMode.value === "match") {
@@ -469,20 +473,26 @@ function createGameStore() {
       blackDifficulty: match.blackStrength,
       perspective: match.perspective,
       movetime: match.movetime,
+      uncapped: match.uncapped,
     };
   }
 
   function getMatchSideConfig(config, color) {
     const isWhite = color === "white";
+    const engineId = isWhite ? config.whiteEngine : config.blackEngine;
     return {
-      engineId: isWhite ? config.whiteEngine : config.blackEngine,
+      engineId,
       difficulty: isWhite ? config.whiteDifficulty : config.blackDifficulty,
+      // Uncapped is Tomitank-only: it removes the per-level depth cap so the
+      // engine searches to the move-time budget (full-strength control).
+      uncapped: !!config.uncapped && engineId === "tomitank",
     };
   }
 
-  function formatMatchSideLabel(color, engineId, difficulty) {
+  function formatMatchSideLabel(color, engineId, difficulty, uncapped = false) {
     const colorLabel = color === "white" ? "White" : "Black";
-    return `${colorLabel} ${getEngineDisplayName(engineId)} (${getEngineStrengthLabel(engineId, difficulty)})`;
+    const strength = uncapped ? "full strength" : getEngineStrengthLabel(engineId, difficulty);
+    return `${colorLabel} ${getEngineDisplayName(engineId)} (${strength})`;
   }
 
   function updateMatchStatus(text) {
@@ -553,13 +563,14 @@ function createGameStore() {
       matchCurrentAdapter = adapter;
       syncBusyState(true);
       updateMatchStatus(
-        `${formatMatchSideLabel(color, engineId, sideConfig.difficulty)} is thinking...`,
+        `${formatMatchSideLabel(color, engineId, sideConfig.difficulty, sideConfig.uncapped)} is thinking...`,
       );
 
       try {
         const move = await adapter.findBestMove(game.state, {
           difficulty: sideConfig.difficulty,
           movetime: config.movetime,
+          uncapped: sideConfig.uncapped,
           signal: matchAbortController?.signal,
           forColor: color,
           onInfo: (info) => {
@@ -567,7 +578,7 @@ function createGameStore() {
             const depth = info?.depth ?? info?.depthCompleted;
             if (depth) {
               updateMatchStatus(
-                `${formatMatchSideLabel(color, engineId, sideConfig.difficulty)} search depth ${depth}`,
+                `${formatMatchSideLabel(color, engineId, sideConfig.difficulty, sideConfig.uncapped)} search depth ${depth}`,
               );
             }
           },
@@ -595,7 +606,7 @@ function createGameStore() {
           const nextColor = game.getCurrentTurn();
           const nextSide = getMatchSideConfig(getMatchConfig(), nextColor);
           updateMatchStatus(
-            `Next: ${formatMatchSideLabel(nextColor, nextSide.engineId, nextSide.difficulty)}.`,
+            `Next: ${formatMatchSideLabel(nextColor, nextSide.engineId, nextSide.difficulty, nextSide.uncapped)}.`,
           );
         }
         await delay(160);
@@ -684,6 +695,7 @@ function createGameStore() {
         result.winner,
         side.engineId,
         side.difficulty,
+        side.uncapped,
       );
       return `Checkmate. ${winner} wins.`;
     }

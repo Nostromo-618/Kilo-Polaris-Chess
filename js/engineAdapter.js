@@ -159,13 +159,14 @@ class AuroraAdapter {
 }
 
 class TomitankAdapter {
-  async findBestMove(gameState, { difficulty = 6, movetime = 10000, signal, onInfo } = {}) {
+  async findBestMove(gameState, { difficulty = 6, movetime = 10000, signal, onInfo, uncapped = false } = {}) {
     if (signal?.aborted) return null;
     return getTomitankClient().findBestMove(gameState, {
       difficulty,
       movetime,
       signal,
       onInfo,
+      uncapped,
     });
   }
 

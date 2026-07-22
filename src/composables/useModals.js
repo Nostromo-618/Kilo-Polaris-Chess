@@ -7,14 +7,18 @@ import { ref } from "vue";
  */
 const disclaimerOpen = ref(false);
 const changelogOpen = ref(false);
+const matchInfoOpen = ref(false);
 
 export function useModals() {
   return {
     disclaimerOpen,
     changelogOpen,
+    matchInfoOpen,
     openDisclaimer: () => (disclaimerOpen.value = true),
     closeDisclaimer: () => (disclaimerOpen.value = false),
     openChangelog: () => (changelogOpen.value = true),
     closeChangelog: () => (changelogOpen.value = false),
+    openMatchInfo: () => (matchInfoOpen.value = true),
+    closeMatchInfo: () => (matchInfoOpen.value = false),
   };
 }

@@ -34,6 +34,26 @@ export const CHANGELOG_ENTRIES = [
           },
         ],
       },
+      {
+        title: "Engine Match",
+        groups: [
+          {
+            title: "Fairer, clearer engine-vs-engine",
+            items: [
+              {
+                icon: "ph-info",
+                title: "How the match works",
+                body: "A new info panel explains the setup honestly: engine \"levels\" are search-depth caps, equal move time is not equal thinking when one side is capped, and how Aurora's top level really compares to Tomitank.",
+              },
+              {
+                icon: "ph-lightning",
+                title: "Tomitank full strength",
+                body: "A new match toggle lets Tomitank ignore its per-level depth cap and search to the move-time budget — the real engine at full strength — for a genuine equal-time yardstick.",
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
   {

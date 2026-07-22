@@ -30,7 +30,8 @@ There is no lint script; `.eslintrc.json` defines the rules (`eqeqeq`, `no-var` 
 
 ```bash
 node tests/matches/selfplay.mjs --a js/engine --b .baseline/engine --games 40 --level 6 --movetime 300
-node tests/matches/vs-tomitank.mjs --games 20 --level 6 --movetime 300   # Playwright; drives Tomitank via UCI
+node tests/matches/vs-tomitank.mjs --games 20 --level 6 --movetime 300   # Playwright; drives Tomitank via UCI (per-level depth cap)
+node tests/matches/control-equal-time.mjs --runs 2 --games 20 --movetime 1000   # equal-time control: Tomitank UNCAPPED, reports a 95% CI
 node tests/matches/perft-check.mjs      # legality validation vs known perft values
 ```
 

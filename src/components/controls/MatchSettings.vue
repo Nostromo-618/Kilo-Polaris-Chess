@@ -4,9 +4,11 @@ import { computed } from "vue";
 import { VdButton, VdSelect } from "@vanduo-oss/vd3";
 import SegmentedControl from "./SegmentedControl.vue";
 import { useGameStore } from "../../composables/useGameStore.js";
+import { useModals } from "../../composables/useModals.js";
 
 const store = useGameStore();
 const { match, matchStrengthLabels, matchControls } = store;
+const { openMatchInfo } = useModals();
 
 const engineOptions = [
   { value: "builtin", label: "Aurora" },
@@ -24,15 +26,31 @@ const movetimeOptions = [
   { value: "5000", label: "5s" },
   { value: "10000", label: "10s" },
 ];
+const uncappedOptions = [
+  { value: "off", label: "Off" },
+  { value: "on", label: "On" },
+];
 
 const movetime = computed({
   get: () => String(match.movetime),
   set: (v) => store.setMatchField("movetime", Number(v)),
 });
+
+// "Full strength" (uncapped) only applies to Tomitank; show it when a side uses it.
+const showUncapped = computed(
+  () => match.whiteEngine === "tomitank" || match.blackEngine === "tomitank",
+);
 </script>
 
 <template>
   <div id="match-settings" class="match-settings">
+    <div class="match-info-row">
+      <button type="button" class="match-info-link" @click="openMatchInfo">
+        <i class="ph-duotone ph-info" aria-hidden="true"></i>
+        How the engine match works
+      </button>
+    </div>
+
     <SegmentedControl
       id="match-white-engine-choice"
       label="White engine"
@@ -68,6 +86,20 @@ const movetime = computed({
       :model-value="match.blackStrength"
       @update:model-value="(v) => store.setMatchField('blackStrength', v)"
     />
+
+    <SegmentedControl
+      v-if="showUncapped"
+      id="match-uncapped-choice"
+      label="Tomitank full strength"
+      data-key="uncapped"
+      :options="uncappedOptions"
+      :model-value="match.uncapped ? 'on' : 'off'"
+      @update:model-value="(v) => store.setMatchField('uncapped', v === 'on')"
+    />
+    <p v-if="showUncapped && match.uncapped" class="match-hint">
+      Depth cap ignored — Tomitank searches to the full move time (its level
+      setting no longer limits it).
+    </p>
 
     <div class="settings-group">
       <label class="settings-label" for="match-movetime-select">Move time</label>
