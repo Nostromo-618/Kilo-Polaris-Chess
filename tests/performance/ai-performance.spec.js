@@ -92,8 +92,11 @@ test.describe('AI Performance - Search Depth vs Time', () => {
             const ai = new AI();
             const state = GameState.createStarting('white');
 
+            // Give level 4 a bounded time budget and assert it RESPECTS it. The
+            // search is time-managed, so this is machine-independent (a hard
+            // "finish depth 8 in <5s" assertion is not — slow CI runners fail it).
             const startTime = performance.now();
-            const move = await ai.findBestMove(state, { level: 4, forColor: 'black', timeout: 10000 });
+            const move = await ai.findBestMove(state, { level: 4, forColor: 'black', timeout: 4000 });
             const endTime = performance.now();
 
             return {

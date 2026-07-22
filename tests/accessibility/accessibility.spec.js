@@ -73,11 +73,10 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
         // Press Space
         await page.keyboard.press(' ');
-        await page.waitForTimeout(500);
 
-        // Verify game started
-        const pieces = await page.locator('.chess-piece.has-piece').count();
-        expect(pieces).toBe(32);
+        // Verify game started (auto-retries until the board renders — a fixed
+        // wait is flaky on slow CI runners).
+        await expect(page.locator('.chess-piece.has-piece')).toHaveCount(32);
     });
 
     test('should activate buttons with Enter key', async ({ page }) => {
@@ -86,11 +85,9 @@ test.describe('Accessibility - Keyboard Navigation', () => {
 
         // Press Enter
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(500);
 
-        // Verify game started
-        const pieces = await page.locator('.chess-piece.has-piece').count();
-        expect(pieces).toBe(32);
+        // Verify game started (auto-retries until the board renders).
+        await expect(page.locator('.chess-piece.has-piece')).toHaveCount(32);
     });
 
     test('should navigate difficulty buttons with keyboard', async ({ page }) => {
