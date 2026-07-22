@@ -62,6 +62,9 @@ engine.
   level 3 at 1000ms/move (stretch: same at 300ms), with no regression vs
   Tomitank level 2 and no levels 1-3 behavior change.
 - Results so far (details in tasks.md): self-play +168 Elo vs 3.1.0 after
-  Phase A; TT3 36.3% -> 41.3% (Elo -98 -> -61) at 1000ms — improved, gate not
-  yet met; the 41.3% was measured under extreme external system load and is a
-  lower bound to be re-measured on an idle machine.
+  Phase A; TT3 36.3% -> 41.3% (Elo -98 -> -61) at 1000ms on day 1 under extreme
+  load (lower bound). **Day 2: TT3 @1000ms = 63.7% (18W-7L-15D, Elo +98) over
+  40 games — milestone gate PASSED.** A 300ms self-play keep/revert experiment
+  around the quiescence TT (60.0% with vs 65.0% without) is documented as an
+  open question with a 1000ms A/B backlog item; the shipped build keeps the
+  quiescence TT because the milestone measurement passed with it.

@@ -1,8 +1,45 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v3.2.0",
+    date: "July 22, 2026",
+    latest: true,
+    columns: [
+      {
+        title: "Engine",
+        groups: [
+          {
+            title: "Aurora Polaris — stronger again",
+            items: [
+              {
+                icon: "ph-trophy",
+                title: "Beats Tomitank level 3",
+                body: "Level 6 now wins its head-to-head against the Tomitank level 3 yardstick (63.7% over 40 games at 1 second per move, up from 36.3% before this cycle), and scores 78.8% against Tomitank level 2 (previously 57.1%).",
+              },
+              {
+                icon: "ph-sort-ascending",
+                title: "Smarter move ordering",
+                body: "The search tries the most promising moves first: exchanges are classified by static exchange evaluation, and quiet refutations are remembered per opponent move (countermove heuristic), so deeper lines are reached in the same time.",
+              },
+              {
+                icon: "ph-scissors",
+                title: "Tighter pruning",
+                body: "Mate-distance pruning trims branches that cannot improve the checkmate score, and the clock is sampled far less often, freeing real time for searching.",
+              },
+              {
+                icon: "ph-database",
+                title: "Evaluation cache",
+                body: "Repeated positions are evaluated once and remembered, and quiescence search uses the transposition table — more of the budget goes to positions that matter. Levels 1–3 play exactly as before.",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: "v3.1.0",
     date: "July 21, 2026",
-    latest: true,
+    latest: false,
     columns: [
       {
         title: "Engine",

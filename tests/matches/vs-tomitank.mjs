@@ -37,23 +37,48 @@ const server = spawn("pnpm", ["exec", "vite", "--port", String(port), "--strictP
 });
 await waitForServer(server, port);
 
-const browser = await chromium.launch();
-const page = await browser.newPage();
-page.on("console", (m) => {
-  const t = m.text();
-  if (t.startsWith("[harness]")) console.log(t);
-});
-await page.goto(`http://localhost:${port}/`, { waitUntil: "domcontentloaded" });
+// The headless browser is sometimes killed externally on long runs (observed
+// twice at ~15-17 min under external system load). Relaunch it transparently
+// and retry the in-flight game; completed games are already persisted.
+async function launchSession() {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  page.on("console", (m) => {
+    const t = m.text();
+    if (t.startsWith("[harness]")) console.log(t);
+  });
+  await page.goto(`http://localhost:${port}/`, { waitUntil: "domcontentloaded" });
+  return { browser, page };
+}
+
+let session = await launchSession();
 
 console.log(`Aurora(level ${level}) vs Tomitank(level ${ttLevel})  games=${games} movetime=${movetime}ms\n`);
 
 let aWins = 0, ttWins = 0, draws = 0;
 const rows = [];
 const started = Date.now();
+const outDir = resolve(HERE, "results");
+mkdirSync(outDir, { recursive: true });
+const outFile = resolve(outDir, `vs-tomitank-${label}-L${level}.json`);
+const saveProgress = () => writeFileSync(
+  outFile,
+  JSON.stringify({ label, level, ttLevel, movetime, games, completed: rows.length, aWins, ttWins, draws, rows }, null, 2)
+);
 
 for (let g = 0; g < games; g++) {
   const auroraColor = g % 2 === 0 ? "white" : "black";
-  const r = await page.evaluate(playOneGame, { level, ttLevel, movetime, maxPlies, auroraColor });
+  let r = null;
+  for (let attempt = 0; attempt < 3 && r === null; attempt++) {
+    try {
+      r = await session.page.evaluate(playOneGame, { level, ttLevel, movetime, maxPlies, auroraColor });
+    } catch (err) {
+      console.log(`game ${g + 1}: browser session lost (${String(err).split("\n")[0]}); relaunching (attempt ${attempt + 1})`);
+      try { await session.browser.close(); } catch { /* already gone */ }
+      session = await launchSession();
+    }
+  }
+  if (r === null) throw new Error(`game ${g + 1}: browser kept dying across relaunches`);
 
   let outcome;
   if (r.winner === null) { draws++; outcome = "draw"; }
@@ -64,6 +89,7 @@ for (let g = 0; g < games; g++) {
   console.log(
     `game ${String(g + 1).padStart(3)}  Aurora=${auroraColor[0].toUpperCase()}  ${outcome.padEnd(13)}  ${r.plies} plies  (${r.reason})`
   );
+  saveProgress();
 }
 
 const score = aWins + draws / 2;
@@ -80,14 +106,12 @@ const summary = [
 ].join("\n");
 console.log(summary);
 
-const outDir = resolve(HERE, "results");
-mkdirSync(outDir, { recursive: true });
 writeFileSync(
-  resolve(outDir, `vs-tomitank-${label}-L${level}.json`),
+  outFile,
   JSON.stringify({ label, level, ttLevel, movetime, games, aWins, ttWins, draws, score, pct, elo, rows }, null, 2)
 );
 
-await browser.close();
+await session.browser.close();
 server.kill("SIGTERM");
 process.exit(0);
 
