@@ -9,7 +9,7 @@ import SidePanelFooter from "./SidePanelFooter.vue";
 import { useGameStore } from "../composables/useGameStore.js";
 
 const store = useGameStore();
-const { settings, playMode } = store;
+const { settings, playMode, canUndo } = store;
 
 const modeOptions = [
   { value: "human", label: "Human" },
@@ -45,6 +45,17 @@ const levelOptions = [
       >
         <i class="ph-duotone ph-flag-checkered" aria-hidden="true"></i>
         New Game
+      </VdButton>
+      <VdButton
+        id="undo-move-btn"
+        variant="secondary"
+        class="undo-move-btn"
+        :disabled="!canUndo"
+        title="Take back your last move and the computer's reply"
+        @click="store.undoLastMove()"
+      >
+        <i class="ph-duotone ph-arrow-counter-clockwise" aria-hidden="true"></i>
+        Undo
       </VdButton>
     </div>
 

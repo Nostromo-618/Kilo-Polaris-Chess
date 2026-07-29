@@ -39,6 +39,33 @@ import { generateLegalMoves, isInCheck, analyzePosition } from "./Rules.js";
  */
 
 /**
+ * Long algebraic history entry: from-to squares, optional =PROMOTION
+ * (e.g. "e2-e4", "e7-e8=Q"). Castling is the king's from/to (e.g. "e1-g1").
+ * Legacy saves may hold SAN instead — those fail this regex.
+ */
+const LONG_ALG_RE = /^([a-h][1-8])-([a-h][1-8])(?:=([QRBN]))?$/;
+
+/**
+ * Match a long algebraic history entry against the legal moves of a position.
+ * @param {string} entry
+ * @param {Move[]} legalMoves
+ * @returns {Move|null}
+ */
+function matchLongAlgebraic(entry, legalMoves) {
+  const m = LONG_ALG_RE.exec(entry);
+  if (!m) return null;
+  const [, from, to, promotion] = m;
+  return (
+    legalMoves.find(
+      (move) =>
+        move.from === from &&
+        move.to === to &&
+        (move.promotion || undefined) === (promotion || undefined),
+    ) || null
+  );
+}
+
+/**
  * @typedef {Object} GameSnapshot
  * @property {Record<string,string|null>} board
  * @property {"white"|"black"} activeColor
@@ -61,6 +88,7 @@ export class GameState {
   static createStarting(playerColor) {
     const state = new GameState();
     state.board = createStartingBoard();
+    state.initialBoard = state.board.slice();
     state.activeColor = "white";
     state.playerColor = playerColor;
     state.castlingRights = {
@@ -83,6 +111,13 @@ export class GameState {
   constructor(data = null) {
     if (data) {
       this.board = data.board ? (Array.isArray(data.board) ? data.board : Object.values(data.board)) : new Array(64).fill(null);
+      // Board the game started from (undo replay base). Custom positions with
+      // an empty history are their own base; saves with a history but no
+      // recorded base predate this field and started from the standard board.
+      const historyLen = Array.isArray(data.moveHistory) ? data.moveHistory.length : 0;
+      this.initialBoard = Array.isArray(data.initialBoard)
+        ? data.initialBoard.slice()
+        : (historyLen === 0 && data.board ? this.board.slice() : createStartingBoard());
       this.activeColor = data.activeColor || "white";
       this.playerColor = data.playerColor || "white";
       this.castlingRights = data.castlingRights || {
@@ -111,6 +146,7 @@ export class GameState {
       this.reversibleHistory = Array.isArray(data.reversibleHistory) ? data.reversibleHistory : [];
     } else {
       this.board = new Array(64).fill(null);
+      this.initialBoard = null;
       this.activeColor = "white";
       this.playerColor = "white";
       this.castlingRights = {
@@ -137,6 +173,7 @@ export class GameState {
   serialize() {
     return {
       board: this.board,
+      initialBoard: this.initialBoard,
       activeColor: this.activeColor,
       playerColor: this.playerColor,
       castlingRights: this.castlingRights,
@@ -407,6 +444,72 @@ export class GameState {
    */
   getReversibleHistory() {
     return this.reversibleHistory;
+  }
+
+  /**
+   * Whether every moveHistory entry is long algebraic (and therefore replayable
+   * for undo). Legacy saves may contain SAN, which we cannot reliably replay.
+   * @returns {boolean}
+   */
+  undoSupported() {
+    return this.moveHistory.every((entry) => LONG_ALG_RE.test(entry));
+  }
+
+  /**
+   * Take back the last half-move, restoring the exact prior position.
+   *
+   * Implemented by replaying the move history (minus the last entry) from the
+   * starting position through applyMove, so every derived structure
+   * (repetition map, reversible-history window, clocks, castling, en passant,
+   * result) is correct by construction. On any replay failure (e.g. legacy SAN
+   * history) this returns false and leaves the state untouched.
+   *
+   * @returns {boolean} true if a ply was undone
+   */
+  undoOnePly() {
+    if (!this.moveHistory.length) return false;
+    // Upfront guard: the replay below validates every entry except the one
+    // being removed, so without this an unparseable last entry (legacy SAN)
+    // would be silently dropped instead of restored.
+    if (!this.undoSupported()) return false;
+    if (!this.initialBoard) return false;
+
+    const rebuilt = new GameState({
+      board: this.initialBoard.slice(),
+      activeColor: "white", // every game starts with white to move
+      playerColor: this.playerColor,
+      initialBoard: this.initialBoard,
+    });
+    rebuilt.recordRepetitionKey();
+    rebuilt.updateStatusText();
+
+    const plies = this.moveHistory.slice(0, -1);
+    for (const entry of plies) {
+      const move = matchLongAlgebraic(
+        entry,
+        generateLegalMoves(rebuilt.asRulesState()),
+      );
+      if (!move) return false; // unreplayable history — state untouched
+      rebuilt.applyMove(move);
+    }
+
+    this.board = rebuilt.board;
+    this.initialBoard = rebuilt.initialBoard;
+    this.activeColor = rebuilt.activeColor;
+    this.castlingRights = rebuilt.castlingRights;
+    this.enPassantTarget = rebuilt.enPassantTarget;
+    this.halfmoveClock = rebuilt.halfmoveClock;
+    this.fullmoveNumber = rebuilt.fullmoveNumber;
+    this.moveHistory = rebuilt.moveHistory;
+    this.result = rebuilt.result;
+    this.lastMove = rebuilt.lastMove;
+    this.lastMoveText = rebuilt.lastMoveText;
+    this.statusText = rebuilt.statusText;
+    this.repetitionMap = rebuilt.repetitionMap;
+    this.reversibleHistory = rebuilt.reversibleHistory;
+    this.selectedSquare = null;
+    this.cachedLegalTargets = [];
+    return true;
   }
 
   /**

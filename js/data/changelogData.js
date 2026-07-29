@@ -1,8 +1,30 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v3.3.0",
+    date: "July 29, 2026",
+    latest: true,
+    columns: [
+      {
+        title: "Gameplay",
+        groups: [
+          {
+            title: "Human play",
+            items: [
+              {
+                icon: "ph-arrow-counter-clockwise",
+                title: "Undo last move",
+                body: "Take back your last move together with the computer's reply and try a different line. Available in Human mode — even after the game has ended — and remembered with your saved game; disabled while the computer is thinking.",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: "v3.2.0",
     date: "July 22, 2026",
-    latest: true,
+    latest: false,
     columns: [
       {
         title: "Engine",

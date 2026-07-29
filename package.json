@@ -1,6 +1,6 @@
 {
   "name": "aurora-polaris-chess",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "private": true,
   "description": "A pure client-side chess game that runs entirely in the browser. All computation happens client-side, making it perfect for static hosting on GitHub Pages. UI powered by Vanduo UI (vd3) for Vue 3.",
   "directories": {

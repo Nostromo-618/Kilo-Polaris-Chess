@@ -274,6 +274,41 @@ export class Game {
   }
 
   /**
+   * Whether an undo is currently meaningful and safe:
+   * - the human has made at least one move (undo never reverts the computer's
+   *   opening move when the human plays black), and
+   * - the whole history is replayable long algebraic (legacy SAN saves are not).
+   * Turn-agnostic on purpose: undo is also offered after the game has ended.
+   * @returns {boolean}
+   */
+  canUndo() {
+    const pliesPlayed = this.state.moveHistory.length;
+    const minPlies = this.getPlayerColor() === "white" ? 1 : 2;
+    if (pliesPlayed < minPlies) return false;
+    return this.state.undoSupported();
+  }
+
+  /**
+   * Take back the human's last move together with any computer replies after
+   * it, so it is the human's turn again. Also works after the game has ended
+   * (e.g. take back the move that led to mate).
+   * @returns {number} number of half-moves undone (0 if undo was not possible)
+   */
+  undoToPlayerTurn() {
+    if (!this.canUndo()) return 0;
+    let undone = 0;
+    do {
+      if (!this.state.undoOnePly()) break;
+      undone += 1;
+    } while (
+      this.state.moveHistory.length &&
+      this.state.activeColor !== this.getPlayerColor()
+    );
+    if (undone > 0) this.notify();
+    return undone;
+  }
+
+  /**
    * Ask AI to compute best move given current state and difficulty.
    * Uses Web Worker for non-blocking computation when available.
    *

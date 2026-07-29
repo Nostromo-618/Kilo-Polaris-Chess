@@ -192,12 +192,19 @@
 
 .new-game-action {
   width: 100%;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .new-game-btn.vd-btn {
-  width: 100%;
+  flex: 1;
   justify-content: center;
   gap: 0.5rem;
+}
+
+.undo-move-btn.vd-btn {
+  justify-content: center;
+  gap: 0.4rem;
 }
 
 /* ── Settings groups + segmented controls ──────────────────────────────── */

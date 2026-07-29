@@ -380,6 +380,42 @@ function createGameStore() {
     }
   }
 
+  // ── Undo (human play) ────────────────────────────────────────────────────
+  /**
+   * Reactive availability for the Undo button. `game` is non-reactive, so the
+   * computed reads `history`/`gameEndResult` (replaced on every notify) to
+   * re-evaluate whenever the position, busy flag, mode, or end-modal changes.
+   * NOTE: every reactive dependency is read BEFORE the early returns — an
+   * early return would skip registering them, leaving the computed stale.
+   */
+  const canUndo = computed(() => {
+    const mode = playMode.value;
+    const busy = status.busy;
+    void history.value;
+    void gameEndResult.value;
+    if (mode !== "human" || busy || !game) return false;
+    return game.canUndo();
+  });
+
+  /**
+   * Take back the player's last move plus the computer's reply, restoring the
+   * player's turn. Also available after the game has ended (dismisses the
+   * game-end modal and resumes the reverted game). No-op while the computer
+   * is thinking, in match mode, or when there is nothing to undo.
+   */
+  function undoLastMove() {
+    if (!game || !canUndo.value) return;
+    pendingPromotion = null;
+    const undone = game.undoToPlayerTurn();
+    if (!undone) return;
+    gameEndResult.value = null;
+    previousGameOver = false;
+    renderCurrentBoard();
+    // Persists the reverted state via syncUIWithGame's throttled save (covers
+    // the post-game-over case too, where clearGame() had wiped the save).
+    syncUIWithGame(game.getSnapshot());
+  }
+
   // ── Settings setters (persist) ───────────────────────────────────────────
   function setColor(color) {
     if (!["white", "black", "random"].includes(color)) return;
@@ -736,6 +772,7 @@ function createGameStore() {
     matchStrengthLabels,
     matchScoreText,
     matchControls,
+    canUndo,
     // board island
     attachBoard,
     detachBoard,
@@ -745,6 +782,7 @@ function createGameStore() {
     handleSquareSelected,
     handlePromotionPicked,
     handlePromotionCancelled,
+    undoLastMove,
     setColor,
     setEngineChoice,
     setDifficultyChoice,
