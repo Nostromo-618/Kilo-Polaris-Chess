@@ -1,8 +1,30 @@
 export const CHANGELOG_ENTRIES = [
   {
+    version: "v3.4.0",
+    date: "August 7, 2026",
+    latest: true,
+    columns: [
+      {
+        title: "Engine Match",
+        groups: [
+          {
+            title: "Aurora at full strength",
+            items: [
+              {
+                icon: "ph-lightning",
+                title: "Aurora full strength",
+                body: "Aurora gets its own full-strength switch, symmetric to Tomitank's: the per-level depth cap is lifted and it searches until the move-time budget is spent (level-6 policy, no jitter). With both switches on, the match is a true equal-time contest between the two real engines.",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: "v3.3.0",
     date: "July 29, 2026",
-    latest: true,
+    latest: false,
     columns: [
       {
         title: "Gameplay",

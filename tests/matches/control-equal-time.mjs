@@ -17,10 +17,14 @@
  *
  * Usage:
  *   node tests/matches/control-equal-time.mjs [--games 20] [--runs 2]
- *        [--level 6] [--movetime 1000] [--capped] [--maxplies 400] [--port 3200]
+ *        [--level 6] [--movetime 1000] [--capped] [--aurora-uncapped]
+ *        [--maxplies 400] [--port 3200]
  *
  * --capped runs Tomitank at its --ttlevel depth cap instead (to reproduce the
  * baseline in the same harness for a side-by-side). Score is from Aurora's view.
+ * --aurora-uncapped drops Aurora's own per-level depth cap too (level-6 policy,
+ * time budget binding) for a symmetric both-uncapped control; it is opt-in so
+ * recorded Aurora-capped baselines stay comparable.
  */
 import { spawn } from "node:child_process";
 import { chromium } from "@playwright/test";
@@ -38,9 +42,14 @@ const level = int(args.level, 6);
 const ttLevel = int(args.ttlevel, 3);
 const movetime = int(args.movetime, 1000);
 const uncapped = !args.capped; // default = the honest uncapped control
+const auroraUncapped = !!args["aurora-uncapped"]; // opt-in symmetric mode
 const maxPlies = int(args.maxplies, 400);
 const port = int(args.port, 3200);
-const label = args.label || (uncapped ? "control-uncapped" : "control-capped");
+const label = args.label || (
+  auroraUncapped
+    ? (uncapped ? "control-both-uncapped" : "control-capped-tt-aurora-uncapped")
+    : (uncapped ? "control-uncapped" : "control-capped")
+);
 
 const server = spawn("pnpm", ["exec", "vite", "--port", String(port), "--strictPort"], {
   cwd: REPO_ROOT,
@@ -62,8 +71,9 @@ async function launchSession() {
 let session = await launchSession();
 
 const oppLabel = uncapped ? "Tomitank(uncapped)" : `Tomitank(L${ttLevel} depth-capped)`;
+const auroraLabel = auroraUncapped ? `Aurora(uncapped, L${level}-policy)` : `Aurora(level ${level})`;
 console.log(
-  `HONEST CONTROL — Aurora(level ${level}) vs ${oppLabel}\n` +
+  `HONEST CONTROL — ${auroraLabel} vs ${oppLabel}\n` +
   `equal movetime=${movetime}ms  runs=${runs}  games/run=${gamesPerRun}  (${runs * gamesPerRun} total)\n`
 );
 
@@ -79,7 +89,7 @@ const started = Date.now();
 const save = (extra = {}) => writeFileSync(
   outFile,
   JSON.stringify({
-    label, mode: uncapped ? "uncapped" : "capped", level, ttLevel, movetime,
+    label, mode: uncapped ? "uncapped" : "capped", auroraUncapped, level, ttLevel, movetime,
     runs, gamesPerRun, completed: rows.length, aWins, ttWins, draws,
     ...extra, perRun, rows,
   }, null, 2)
@@ -94,7 +104,7 @@ for (let run = 0; run < runs; run++) {
     let r = null;
     for (let attempt = 0; attempt < 3 && r === null; attempt++) {
       try {
-        r = await session.page.evaluate(playOneGame, { level, ttLevel, movetime, maxPlies, auroraColor, uncapped });
+        r = await session.page.evaluate(playOneGame, { level, ttLevel, movetime, maxPlies, auroraColor, uncapped, auroraUncapped });
       } catch (err) {
         console.log(`game ${gameNo}: browser session lost (${String(err).split("\n")[0]}); relaunching (attempt ${attempt + 1})`);
         try { await session.browser.close(); } catch { /* already gone */ }
@@ -126,8 +136,8 @@ const secs = ((Date.now() - started) / 1000).toFixed(0);
 
 const summary = [
   ``,
-  `=== HONEST CONTROL RESULT (${uncapped ? "UNCAPPED equal-time" : "capped"}) ===`,
-  `Aurora(L${level}) vs ${oppLabel}  @ ${movetime}ms/move`,
+  `=== HONEST CONTROL RESULT (${uncapped ? "UNCAPPED equal-time" : "capped"}${auroraUncapped ? ", Aurora uncapped" : ""}) ===`,
+  `${auroraLabel} vs ${oppLabel}  @ ${movetime}ms/move`,
   `Total: ${aWins}W  ${ttWins}L  ${draws}D   over ${rows.length} games, ${runs} runs (${secs}s)`,
   `Aurora score: ${st.score}/${rows.length} = ${st.pct}%   95% CI [${(st.lo * 100).toFixed(1)}%, ${(st.hi * 100).toFixed(1)}%]`,
   `Est. Elo(Aurora - Tomitank): ${fmtElo(st.elo)}   95% CI [${fmtElo(st.eloLo)}, ${fmtElo(st.eloHi)}]`,
@@ -144,7 +154,7 @@ server.kill("SIGTERM");
 process.exit(0);
 
 /** Runs entirely inside the browser page. Returns { winner, reason, plies }. */
-async function playOneGame({ level, ttLevel, movetime, maxPlies, auroraColor, uncapped }) {
+async function playOneGame({ level, ttLevel, movetime, maxPlies, auroraColor, uncapped, auroraUncapped }) {
   const [aiMod, gsMod, rulesMod, ttMod] = await Promise.all([
     import("/js/engine/AI.js"),
     import("/js/engine/GameState.js"),
@@ -186,6 +196,7 @@ async function playOneGame({ level, ttLevel, movetime, maxPlies, auroraColor, un
     if (mover === auroraColor) {
       const move = await ai.findBestMove(gs.serialize(), {
         level, forColor: mover, timeout: movetime, history: sinceIrrev.slice(),
+        uncapped: !!auroraUncapped,
       });
       const info = ai.getLastSearchInfo();
       moverScore = typeof info.bestScore === "number" ? info.bestScore : 0;

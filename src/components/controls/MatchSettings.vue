@@ -1,7 +1,7 @@
 <script setup>
 /** Engine-vs-engine match configuration + transport controls. */
 import { computed } from "vue";
-import { VdButton, VdSelect } from "@vanduo-oss/vd3";
+import { VdButton, VdSelect, VdSwitch } from "@vanduo-oss/vd3";
 import SegmentedControl from "./SegmentedControl.vue";
 import { useGameStore } from "../../composables/useGameStore.js";
 import { useModals } from "../../composables/useModals.js";
@@ -26,19 +26,19 @@ const movetimeOptions = [
   { value: "5000", label: "5s" },
   { value: "10000", label: "10s" },
 ];
-const uncappedOptions = [
-  { value: "off", label: "Off" },
-  { value: "on", label: "On" },
-];
 
 const movetime = computed({
   get: () => String(match.movetime),
   set: (v) => store.setMatchField("movetime", Number(v)),
 });
 
-// "Full strength" (uncapped) only applies to Tomitank; show it when a side uses it.
+// Each engine has its own "full strength" (uncapped) toggle; show it when a
+// side uses that engine.
 const showUncapped = computed(
   () => match.whiteEngine === "tomitank" || match.blackEngine === "tomitank",
+);
+const showAuroraUncapped = computed(
+  () => match.whiteEngine === "builtin" || match.blackEngine === "builtin",
 );
 </script>
 
@@ -87,19 +87,33 @@ const showUncapped = computed(
       @update:model-value="(v) => store.setMatchField('blackStrength', v)"
     />
 
-    <SegmentedControl
-      v-if="showUncapped"
-      id="match-uncapped-choice"
-      label="Tomitank full strength"
-      data-key="uncapped"
-      :options="uncappedOptions"
-      :model-value="match.uncapped ? 'on' : 'off'"
-      @update:model-value="(v) => store.setMatchField('uncapped', v === 'on')"
-    />
-    <p v-if="showUncapped && match.uncapped" class="match-hint">
-      Depth cap ignored — Tomitank searches to the full move time (its level
-      setting no longer limits it).
-    </p>
+    <div v-if="showUncapped" class="settings-group">
+      <VdSwitch
+        id="match-uncapped-choice"
+        label="Tomitank full strength"
+        size="sm"
+        :model-value="match.uncapped"
+        @update:model-value="(v) => store.setMatchField('uncapped', v)"
+      />
+      <p v-if="match.uncapped" class="match-hint">
+        Depth cap ignored — Tomitank searches to the full move time (its level
+        setting no longer limits it).
+      </p>
+    </div>
+
+    <div v-if="showAuroraUncapped" class="settings-group">
+      <VdSwitch
+        id="match-aurora-uncapped-choice"
+        label="Aurora full strength"
+        size="sm"
+        :model-value="match.auroraUncapped"
+        @update:model-value="(v) => store.setMatchField('auroraUncapped', v)"
+      />
+      <p v-if="match.auroraUncapped" class="match-hint">
+        Depth cap ignored — Aurora searches to the full move time (its level
+        setting no longer limits it).
+      </p>
+    </div>
 
     <div class="settings-group">
       <label class="settings-label" for="match-movetime-select">Move time</label>

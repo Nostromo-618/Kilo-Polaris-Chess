@@ -72,4 +72,53 @@ test.describe('Engine Match Mode', () => {
         await expect(page.locator('#match-white-strength-label')).toContainText('White Tomitank depth');
         await expect(page.locator('#match-black-strength-label')).toContainText('Black Aurora strength');
     });
+
+    test('Aurora full-strength toggle maps to the builtin side and persists', async ({ page }) => {
+        await page.locator('#play-mode-choice button[data-mode="match"]').click();
+        await page.locator('#match-white-engine-choice button[data-engine="builtin"]').click();
+        await page.locator('#match-black-engine-choice button[data-engine="tomitank"]').click();
+
+        // Each engine gets its own full-strength switch when it plays a side.
+        // The switch input is visually hidden by design (track/thumb CSS), so
+        // visibility is asserted on the label text and state via isChecked().
+        await expect(page.getByText('Tomitank full strength')).toBeVisible();
+        await expect(page.getByText('Aurora full strength')).toBeVisible();
+
+        await page.getByText('Aurora full strength').click();
+        expect(await page.locator('#match-aurora-uncapped-choice').isChecked()).toBe(true);
+        await expect(page.locator('.match-hint')).toContainText('Aurora searches to the full move time');
+
+        const mapping = await page.evaluate(async () => {
+            const { useGameStore } = await import('/src/composables/useGameStore.js');
+            const store = useGameStore();
+            const config = store.getMatchConfig();
+            return {
+                stored: localStorage.getItem('kpc-match-aurora-uncapped'),
+                white: store.getMatchSideConfig(config, 'white'),
+                black: store.getMatchSideConfig(config, 'black'),
+            };
+        });
+
+        expect(mapping.stored).toBe('true');
+        // The builtin side follows auroraUncapped; the Tomitank side still
+        // follows its own (off) uncapped flag.
+        expect(mapping.white.engineId).toBe('builtin');
+        expect(mapping.white.uncapped).toBe(true);
+        expect(mapping.black.engineId).toBe('tomitank');
+        expect(mapping.black.uncapped).toBe(false);
+
+        // Persisted across reloads.
+        await page.reload();
+        await page.locator('#play-mode-choice button[data-mode="match"]').click();
+        expect(await page.locator('#match-aurora-uncapped-choice').isChecked()).toBe(true);
+    });
+
+    test('Aurora uncapped toggle is hidden when no side uses the builtin engine', async ({ page }) => {
+        await page.locator('#play-mode-choice button[data-mode="match"]').click();
+        await page.locator('#match-white-engine-choice button[data-engine="tomitank"]').click();
+        await page.locator('#match-black-engine-choice button[data-engine="tomitank"]').click();
+
+        await expect(page.getByText('Aurora full strength')).toBeHidden();
+        await expect(page.getByText('Tomitank full strength')).toBeVisible();
+    });
 });

@@ -5,7 +5,7 @@
  * Runs AI search off the main thread to prevent UI blocking.
  *
  * Messages received:
- *   { type: 'search', state: {...}, level: 1-6, forColor: 'white'|'black', timeout: ms }
+ *   { type: 'search', state: {...}, level: 1-6, forColor: 'white'|'black', timeout: ms, uncapped?: boolean }
  *
  * Messages sent:
  *   { type: 'result', move: Move|null, info?: Object }
@@ -27,7 +27,7 @@ const ai = new AI();
 let activeSignal = null;
 
 self.onmessage = async function (event) {
-  const { type, state, level, forColor, timeout, history } = event.data;
+  const { type, state, level, forColor, timeout, history, uncapped } = event.data;
 
   if (type === "stop") {
     if (activeSignal) activeSignal.aborted = true;
@@ -80,6 +80,7 @@ self.onmessage = async function (event) {
         forColor: forColor,
         timeout: timeout || 10000,
         history: Array.isArray(history) ? history : [],
+        uncapped: !!uncapped,
         signal,
         onInfo: (info) => self.postMessage({ type: "info", info }),
       });

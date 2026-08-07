@@ -758,3 +758,169 @@ test.describe('AI - Edge Cases', () => {
         expect(true).toBe(true);
     });
 });
+
+test.describe('AI - Uncapped match mode', () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto('/');
+        await page.evaluate(() => {
+            localStorage.setItem('kpc-disclaimer-accepted', 'true');
+        });
+        await page.reload();
+    });
+
+    // Boards are indexed a1 = 0 … h8 = 63 (see Board.js).
+    // KPvK: capped level 6 resolves to its depth cap (22) in well under a
+    // second; uncapped keeps deepening until the clock stops it (depth ~28 at
+    // 2.5s in Node — verified via tests/matches-style probe).
+    const SPARSE_PAWN_ENDING = [['e1', 'wK'], ['e8', 'bK'], ['a2', 'wP']];
+    const FORCING_PROMOTION = [['e1', 'wK'], ['h8', 'bK'], ['a7', 'wP']];
+
+    test('uncapped search deepens past the level-6 depth cap', async ({ page }) => {
+        test.slow();
+        const result = await page.evaluate(async ([sparse]) => {
+            const { AI } = await import('/js/engine/AI.js');
+
+            const buildState = (pieces, activeColor = 'white') => {
+                const board = new Array(64).fill(null);
+                for (const [sq, p] of pieces) {
+                    const file = sq.charCodeAt(0) - 97;
+                    const rank = Number(sq[1]) - 1;
+                    board[rank * 8 + file] = p;
+                }
+                return {
+                    board,
+                    activeColor,
+                    castlingRights: {
+                        white: { kingSide: false, queenSide: false },
+                        black: { kingSide: false, queenSide: false }
+                    },
+                    enPassantTarget: null,
+                    halfmoveClock: 0,
+                    fullmoveNumber: 40
+                };
+            };
+
+            // Few pieces: a capped level-6 search resolves to its depth cap (22)
+            // well within the budget, while uncapped must keep deepening until
+            // the clock stops it.
+            const cappedAI = new AI();
+            await cappedAI.findBestMove(buildState(sparse), { level: 6, forColor: 'white', timeout: 2500 });
+            const cappedDepth = cappedAI.getLastSearchInfo().depthCompleted;
+
+            const uncappedAI = new AI();
+            await uncappedAI.findBestMove(buildState(sparse), { level: 6, forColor: 'white', timeout: 4000, uncapped: true });
+            const uncappedDepth = uncappedAI.getLastSearchInfo().depthCompleted;
+
+            return { cappedDepth, uncappedDepth };
+        }, [SPARSE_PAWN_ENDING]);
+
+        expect(result.cappedDepth).toBeLessThanOrEqual(22);
+        expect(result.uncappedDepth).toBeGreaterThan(22);
+        expect(result.uncappedDepth).toBeLessThanOrEqual(56);
+    });
+
+    test('uncapped search is deterministic', async ({ page }) => {
+        test.slow();
+        const result = await page.evaluate(async ([forcing]) => {
+            const { AI } = await import('/js/engine/AI.js');
+
+            const buildState = (pieces, activeColor = 'white') => {
+                const board = new Array(64).fill(null);
+                for (const [sq, p] of pieces) {
+                    const file = sq.charCodeAt(0) - 97;
+                    const rank = Number(sq[1]) - 1;
+                    board[rank * 8 + file] = p;
+                }
+                return {
+                    board,
+                    activeColor,
+                    castlingRights: {
+                        white: { kingSide: false, queenSide: false },
+                        black: { kingSide: false, queenSide: false }
+                    },
+                    enPassantTarget: null,
+                    halfmoveClock: 0,
+                    fullmoveNumber: 40
+                };
+            };
+
+            // a7 pawn promotes by force — the best move is stable at every
+            // depth, so timing-driven depth differences cannot flip the choice.
+            const run = async () => {
+                const ai = new AI();
+                const move = await ai.findBestMove(buildState(forcing), { level: 6, forColor: 'white', timeout: 800, uncapped: true });
+                const info = ai.getLastSearchInfo();
+                return { from: move?.from, to: move?.to, promotion: move?.promotion ?? null, score: info.bestScore };
+            };
+
+            return { first: await run(), second: await run() };
+        }, [FORCING_PROMOTION]);
+
+        expect(result.first.from).toBe('a7');
+        expect(result.first.to).toBe('a8');
+        // Same move every run — uncapped mode has no jitter. The exact score is
+        // not asserted: it can differ by a couple of cp depending on which
+        // iteration the wall-clock cutoff lands on.
+        expect(result.second.from).toBe(result.first.from);
+        expect(result.second.to).toBe(result.first.to);
+        expect(result.second.promotion).toBe(result.first.promotion);
+    });
+
+    test('uncapped search respects the time budget', async ({ page }) => {
+        const result = await page.evaluate(async ([sparse]) => {
+            const { AI } = await import('/js/engine/AI.js');
+
+            const buildState = (pieces, activeColor = 'white') => {
+                const board = new Array(64).fill(null);
+                for (const [sq, p] of pieces) {
+                    const file = sq.charCodeAt(0) - 97;
+                    const rank = Number(sq[1]) - 1;
+                    board[rank * 8 + file] = p;
+                }
+                return {
+                    board,
+                    activeColor,
+                    castlingRights: {
+                        white: { kingSide: false, queenSide: false },
+                        black: { kingSide: false, queenSide: false }
+                    },
+                    enPassantTarget: null,
+                    halfmoveClock: 0,
+                    fullmoveNumber: 40
+                };
+            };
+
+            const ai = new AI();
+            const start = Date.now();
+            const move = await ai.findBestMove(buildState(sparse), { level: 6, forColor: 'white', timeout: 400, uncapped: true });
+            const elapsed = Date.now() - start;
+
+            return { hasMove: move !== null, elapsed, timeout: 400 };
+        }, [SPARSE_PAWN_ENDING]);
+
+        expect(result.hasMove).toBe(true);
+        // Generous slack for CI machines: sampled clock (~256-node cadence) plus
+        // the tail guard should land well under timeout + 1s. (The timedOut flag
+        // itself is not asserted: the tail guard is a deliberate non-timeout exit.)
+        expect(result.elapsed).toBeLessThan(result.timeout + 1000);
+    });
+
+    test('capped levels are unaffected by the uncapped option', async ({ page }) => {
+        const result = await page.evaluate(async () => {
+            const { AI } = await import('/js/engine/AI.js');
+            const { GameState } = await import('/js/engine/GameState.js');
+
+            const ai = new AI();
+            const state = GameState.createStarting('white');
+
+            // Level 3 stays shallow and quick regardless of the new option.
+            const move = await ai.findBestMove(state, { level: 3, forColor: 'white', timeout: 5000 });
+            const info = ai.getLastSearchInfo();
+
+            return { hasMove: move !== null, depthCompleted: info.depthCompleted };
+        });
+
+        expect(result.hasMove).toBe(true);
+        expect(result.depthCompleted).toBeLessThanOrEqual(3);
+    });
+});

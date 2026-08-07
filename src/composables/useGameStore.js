@@ -41,6 +41,8 @@ import {
   setMatchPerspective,
   getMatchUncapped,
   setMatchUncapped,
+  getMatchAuroraUncapped,
+  setMatchAuroraUncapped,
 } from "../../js/storage.js";
 import { getTomitankClient } from "../../js/tomitankClient.js";
 import {
@@ -94,6 +96,7 @@ function createGameStore() {
     movetime: getMatchMoveTime(),
     perspective: getMatchPerspective(),
     uncapped: getMatchUncapped(),
+    auroraUncapped: getMatchAuroraUncapped(),
     running: false,
     paused: false,
     pauseRequested: false,
@@ -466,6 +469,7 @@ function createGameStore() {
       movetime: setMatchMoveTime,
       perspective: setMatchPerspective,
       uncapped: setMatchUncapped,
+      auroraUncapped: setMatchAuroraUncapped,
     }[field];
     persist?.(value);
     if (field === "perspective" && game && playMode.value === "match") {
@@ -510,6 +514,7 @@ function createGameStore() {
       perspective: match.perspective,
       movetime: match.movetime,
       uncapped: match.uncapped,
+      auroraUncapped: match.auroraUncapped,
     };
   }
 
@@ -519,9 +524,10 @@ function createGameStore() {
     return {
       engineId,
       difficulty: isWhite ? config.whiteDifficulty : config.blackDifficulty,
-      // Uncapped is Tomitank-only: it removes the per-level depth cap so the
-      // engine searches to the move-time budget (full-strength control).
-      uncapped: !!config.uncapped && engineId === "tomitank",
+      // Uncapped removes the per-level depth cap so the engine searches to the
+      // move-time budget (full-strength control). Each engine has its own flag:
+      // `uncapped` for Tomitank, `auroraUncapped` for the built-in engine.
+      uncapped: engineId === "tomitank" ? !!config.uncapped : !!config.auroraUncapped,
     };
   }
 
@@ -792,6 +798,9 @@ function createGameStore() {
     startEngineMatch,
     pauseOrResumeMatch,
     stopMatch: stopMatchWithStatus,
+    // match config helpers (pure; exposed for tests)
+    getMatchConfig,
+    getMatchSideConfig,
     // helpers exposed for disclaimer gate
     getDisclaimerAccepted,
   };

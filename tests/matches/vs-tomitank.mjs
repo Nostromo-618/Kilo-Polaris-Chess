@@ -8,10 +8,11 @@
  *
  * Usage:
  *   node tests/matches/vs-tomitank.mjs [--games 20] [--level 6] [--movetime 300]
- *        [--ttlevel <n>] [--maxplies 400] [--port 3100] [--label before]
+ *        [--ttlevel <n>] [--aurora-uncapped] [--maxplies 400] [--port 3100] [--label before]
  *
  * Score is reported from Aurora's perspective. --ttlevel sets Tomitank's
- * difficulty (default = same as Aurora's level).
+ * difficulty (default = same as Aurora's level). --aurora-uncapped drops
+ * Aurora's per-level depth cap (level-6 policy, time budget binding).
  */
 import { spawn } from "node:child_process";
 import { chromium } from "@playwright/test";
@@ -27,6 +28,7 @@ const games = int(args.games, 20);
 const level = int(args.level, 6);
 const ttLevel = int(args.ttlevel, level);
 const movetime = int(args.movetime, 300);
+const auroraUncapped = !!args["aurora-uncapped"];
 const maxPlies = int(args.maxplies, 400);
 const port = int(args.port, 3100);
 const label = args.label || "run";
@@ -53,17 +55,17 @@ async function launchSession() {
 
 let session = await launchSession();
 
-console.log(`Aurora(level ${level}) vs Tomitank(level ${ttLevel})  games=${games} movetime=${movetime}ms\n`);
+console.log(`Aurora(${auroraUncapped ? "uncapped" : `level ${level}`}) vs Tomitank(level ${ttLevel})  games=${games} movetime=${movetime}ms\n`);
 
 let aWins = 0, ttWins = 0, draws = 0;
 const rows = [];
 const started = Date.now();
 const outDir = resolve(HERE, "results");
 mkdirSync(outDir, { recursive: true });
-const outFile = resolve(outDir, `vs-tomitank-${label}-L${level}.json`);
+const outFile = resolve(outDir, `vs-tomitank-${label}-L${level}${auroraUncapped ? "-aurora-uncapped" : ""}.json`);
 const saveProgress = () => writeFileSync(
   outFile,
-  JSON.stringify({ label, level, ttLevel, movetime, games, completed: rows.length, aWins, ttWins, draws, rows }, null, 2)
+  JSON.stringify({ label, level, ttLevel, movetime, auroraUncapped, games, completed: rows.length, aWins, ttWins, draws, rows }, null, 2)
 );
 
 for (let g = 0; g < games; g++) {
@@ -71,7 +73,7 @@ for (let g = 0; g < games; g++) {
   let r = null;
   for (let attempt = 0; attempt < 3 && r === null; attempt++) {
     try {
-      r = await session.page.evaluate(playOneGame, { level, ttLevel, movetime, maxPlies, auroraColor });
+      r = await session.page.evaluate(playOneGame, { level, ttLevel, movetime, maxPlies, auroraColor, auroraUncapped });
     } catch (err) {
       console.log(`game ${g + 1}: browser session lost (${String(err).split("\n")[0]}); relaunching (attempt ${attempt + 1})`);
       try { await session.browser.close(); } catch { /* already gone */ }
@@ -108,7 +110,7 @@ console.log(summary);
 
 writeFileSync(
   outFile,
-  JSON.stringify({ label, level, ttLevel, movetime, games, aWins, ttWins, draws, score, pct, elo, rows }, null, 2)
+  JSON.stringify({ label, level, ttLevel, movetime, auroraUncapped, games, aWins, ttWins, draws, score, pct, elo, rows }, null, 2)
 );
 
 await session.browser.close();
@@ -119,7 +121,7 @@ process.exit(0);
  * Runs entirely inside the browser page. Returns { winner, reason, plies }.
  * winner is "white" | "black" | null.
  */
-async function playOneGame({ level, ttLevel, movetime, maxPlies, auroraColor }) {
+async function playOneGame({ level, ttLevel, movetime, maxPlies, auroraColor, auroraUncapped }) {
   const [aiMod, gsMod, rulesMod, ttMod] = await Promise.all([
     import("/js/engine/AI.js"),
     import("/js/engine/GameState.js"),
@@ -161,6 +163,7 @@ async function playOneGame({ level, ttLevel, movetime, maxPlies, auroraColor }) 
     if (mover === auroraColor) {
       const move = await ai.findBestMove(gs.serialize(), {
         level, forColor: mover, timeout: movetime, history: sinceIrrev.slice(),
+        uncapped: !!auroraUncapped,
       });
       const info = ai.getLastSearchInfo();
       moverScore = typeof info.bestScore === "number" ? info.bestScore : 0;

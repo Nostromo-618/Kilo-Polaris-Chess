@@ -46,12 +46,13 @@ const { matchInfoOpen } = useModals();
       </section>
 
       <section class="match-info-section">
-        <h4><i class="ph-duotone ph-lightning" aria-hidden="true"></i> Tomitank full strength</h4>
+        <h4><i class="ph-duotone ph-lightning" aria-hidden="true"></i> Full strength (uncapped)</h4>
         <p>
-          Turning on <strong>Tomitank full strength</strong> removes the depth
-          cap and lets it search to the move-time limit — the real engine, above
-          level 6. Its level selector then no longer limits it. Expect it to be
-          much stronger.
+          Each engine has a <strong>full strength</strong> toggle that removes
+          its depth cap and lets it search to the move-time limit — the real
+          engine, above level 6. The level selector then no longer limits that
+          engine. With both toggles on, the match is a true equal-time contest;
+          expect Tomitank to be much stronger.
         </p>
       </section>
 

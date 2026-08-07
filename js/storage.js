@@ -20,6 +20,7 @@
  *   kpc-match-movetime       per-move milliseconds
  *   kpc-match-perspective    "white" | "black"
  *   kpc-match-uncapped       "true" when Tomitank ignores its level depth cap (match mode)
+ *   kpc-match-aurora-uncapped "true" when Aurora ignores its level depth cap (match mode)
  */
 
 const KEYS = {
@@ -38,6 +39,7 @@ const KEYS = {
   MATCH_MOVETIME: 'kpc-match-movetime',
   MATCH_PERSPECTIVE: 'kpc-match-perspective',
   MATCH_UNCAPPED: 'kpc-match-uncapped',
+  MATCH_AURORA_UNCAPPED: 'kpc-match-aurora-uncapped',
 };
 
 /**
@@ -244,6 +246,22 @@ export function getMatchUncapped() {
 /** @param {boolean} value */
 export function setMatchUncapped(value) {
   write(KEYS.MATCH_UNCAPPED, value ? 'true' : 'false');
+}
+
+/**
+ * Match-only: when true, Aurora searches to the move-time budget instead of
+ * being capped at its per-level depth (full-strength control, symmetric to
+ * the Tomitank flag). Human-vs-CPU play is unaffected — this flag never
+ * reaches that path.
+ * @returns {boolean}
+ */
+export function getMatchAuroraUncapped() {
+  return read(KEYS.MATCH_AURORA_UNCAPPED) === 'true';
+}
+
+/** @param {boolean} value */
+export function setMatchAuroraUncapped(value) {
+  write(KEYS.MATCH_AURORA_UNCAPPED, value ? 'true' : 'false');
 }
 
 // ── Difficulty ───────────────────────────────────────────────────────────────

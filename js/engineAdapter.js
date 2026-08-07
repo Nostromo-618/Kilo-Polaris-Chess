@@ -92,7 +92,7 @@ class AuroraAdapter {
     if (this.useWorker) initAuroraWorker();
   }
 
-  async findBestMove(gameState, { difficulty = 6, movetime = 10000, signal, onInfo, forColor, history } = {}) {
+  async findBestMove(gameState, { difficulty = 6, movetime = 10000, signal, onInfo, forColor, history, uncapped = false } = {}) {
     if (signal?.aborted) return null;
 
     const state = toSearchState(gameState);
@@ -138,6 +138,7 @@ class AuroraAdapter {
           forColor: color,
           timeout,
           history,
+          uncapped,
         });
       });
     }
@@ -149,6 +150,7 @@ class AuroraAdapter {
       signal,
       onInfo,
       history,
+      uncapped,
     });
     return signal?.aborted ? null : move;
   }

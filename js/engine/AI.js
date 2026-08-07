@@ -750,6 +750,13 @@ const EVAL_CACHE_MASK = 65535n;
 /** Null move reduction depth */
 const NULL_MOVE_REDUCTION = 3;
 
+/**
+ * Deepest iterative-deepening iteration allowed in uncapped (match) mode.
+ * Purely a safety ceiling for ply-indexed tables — in practice the per-move
+ * time budget stops the search far earlier.
+ */
+const UNCAPPED_MAX_DEPTH = 56;
+
 /** Minimum pieces (non-pawns) before disabling null move pruning */
 const ENDGAME_PIECE_THRESHOLD = 7;
 
@@ -792,10 +799,11 @@ export class AI {
       6: 22,
     };
 
-    // Killer moves: 2 slots per remaining-depth level (sized for the deepest cap
-    // plus check extensions).
+    // Killer moves: 2 slots per remaining-depth level. Sized well past
+    // UNCAPPED_MAX_DEPTH so uncapped searches keep killer coverage (indexing
+    // is bounds-guarded regardless).
     this.killerMoves = [];
-    for (let i = 0; i < 64; i++) {
+    for (let i = 0; i < 128; i++) {
       this.killerMoves.push([null, null]);
     }
 
@@ -1081,18 +1089,23 @@ export class AI {
 
   /**
    * Top-level API used by Game.
+   *
+   * `uncapped` (engine-vs-engine matches only) runs the level-6 search policy
+   * with no per-level depth cap: iterative deepening continues until the
+   * timeout (or UNCAPPED_MAX_DEPTH) stops it. Levels 1-6 are unaffected.
    */
-  async findBestMove(gameState, { level, forColor, timeout = 10000, signal, onInfo, history } = {}) {
+  async findBestMove(gameState, { level, forColor, timeout = 10000, signal, onInfo, history, uncapped = false } = {}) {
     if (signal?.aborted) return null;
     this.resetSearchInfo();
     // Fresh killer/history signal per search; the TT is kept across moves of a game.
     this.clearSearchData();
 
     const clampedLevel = Math.max(1, Math.min(6, Number(level) || 1));
-    const depth = this.depthForLevel[clampedLevel];
+    const effectiveLevel = uncapped ? 6 : clampedLevel;
+    const depth = uncapped ? UNCAPPED_MAX_DEPTH : this.depthForLevel[clampedLevel];
 
-    // Resize TT for Level 6
-    this.resizeTT(clampedLevel);
+    // Resize TT for Level 6 (uncapped mode uses the level-6 policy)
+    this.resizeTT(effectiveLevel);
 
     const baseState = new SearchState(gameState);
     const searchColor = forColor || baseState.activeColor;
@@ -1119,25 +1132,25 @@ export class AI {
     const legalMoves = generateLegalMoves(baseState);
     if (legalMoves.length === 0) return null;
 
-    if (clampedLevel === 1) {
+    if (effectiveLevel === 1) {
       const move = this.pickLevel1Move(baseState, legalMoves, searchColor);
       this.lastSearchInfo.depthCompleted = 1;
       onInfo?.(this.getLastSearchInfo());
       return signal?.aborted ? null : move;
     }
 
-    if (clampedLevel >= 2) {
+    if (effectiveLevel >= 2) {
       // A cooperative abort mid-search returns the best move from the last fully
       // completed depth (progressiveDeepeningSearch breaks and keeps it), rather
       // than discarding the whole search.
-      const move = await this.progressiveDeepeningSearch(baseState, legalMoves, depth, searchColor, clampedLevel, timeout, signal, onInfo);
+      const move = await this.progressiveDeepeningSearch(baseState, legalMoves, depth, searchColor, effectiveLevel, timeout, signal, onInfo);
       onInfo?.(this.getLastSearchInfo());
       return move;
     }
 
     return new Promise((resolve) => {
       const move = this.searchRoot(baseState, legalMoves, depth, searchColor, {
-        level: clampedLevel,
+        level: effectiveLevel,
         timeout,
         startTime: Date.now(),
       });
