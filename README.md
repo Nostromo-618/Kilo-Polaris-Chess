@@ -1,3 +1,13 @@
+> **End of life — superseded by Spindrift Chess**
+>
+> This repository is **archived and no longer maintained**. GitHub Pages for this
+> project is being turned off.
+>
+> - **Play:** https://spindriftchess.online
+> - **Source:** https://github.com/Nostromo-618/spindrift-chess
+>
+> Spindrift Chess is the successor to Aurora Polaris Chess.
+
 # Aurora Polaris Chess
 
 A pure client-side chess game that runs entirely in the browser — play against a
